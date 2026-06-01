@@ -5,44 +5,44 @@ const FONT = "'Archivo', sans-serif"
 const R = 20
 
 const C = {
-  bg:          '#141517',
-  card:        '#FFFFFF',
-  cardAlt:     '#F2F4F7',
-  text:        '#141517',
-  textMuted:   '#8A8D93',
-  textLight:   '#C4C6CA',
-  textWhite:   '#FFFFFF',
-  accent:      '#FF4F18',
+  bg: '#141517',
+  card: '#FFFFFF',
+  cardAlt: '#F2F4F7',
+  text: '#141517',
+  textMuted: '#8A8D93',
+  textLight: '#C4C6CA',
+  textWhite: '#FFFFFF',
+  accent: '#FF4F18',
   accentLight: '#FF8A5C',
-  danger:      '#D45858',
-  dangerBg:    '#D4585833',
-  border:      '#222426',
+  danger: '#D45858',
+  dangerBg: '#D4585833',
+  border: '#222426',
   borderHover: '#3A3A3A',
-  shadow:      'rgba(0,0,0,0.1)',
-  shadowDeep:  'rgba(0,0,0,0.5)',
-  overlay06:   'rgba(0,0,0,0.06)',
-  overlayW10:  'rgba(255,255,255,0.10)',
-  overlayW15:  'rgba(255,255,255,0.15)',
-  overlayW20:  'rgba(255,255,255,0.20)',
-  overlayW25:  'rgba(255,255,255,0.25)',
-  overlayW30:  'rgba(255,255,255,0.30)',
-  overlayW35:  'rgba(255,255,255,0.35)',
-  overlayW40:  'rgba(255,255,255,0.40)',
-  overlayW50:  'rgba(255,255,255,0.50)',
-  overlayB10:  'rgba(0,0,0,0.10)',
-  overlayB20:  'rgba(0,0,0,0.20)',
-  overlayB35:  'rgba(0,0,0,0.35)',
-  overlayB40:  'rgba(0,0,0,0.40)',
+  shadow: 'rgba(0,0,0,0.1)',
+  shadowDeep: 'rgba(0,0,0,0.5)',
+  overlay06: 'rgba(0,0,0,0.06)',
+  overlayW10: 'rgba(255,255,255,0.10)',
+  overlayW15: 'rgba(255,255,255,0.15)',
+  overlayW20: 'rgba(255,255,255,0.20)',
+  overlayW25: 'rgba(255,255,255,0.25)',
+  overlayW30: 'rgba(255,255,255,0.30)',
+  overlayW35: 'rgba(255,255,255,0.35)',
+  overlayW40: 'rgba(255,255,255,0.40)',
+  overlayW50: 'rgba(255,255,255,0.50)',
+  overlayB10: 'rgba(0,0,0,0.10)',
+  overlayB20: 'rgba(0,0,0,0.20)',
+  overlayB35: 'rgba(0,0,0,0.35)',
+  overlayB40: 'rgba(0,0,0,0.40)',
 }
 
 const PALETTE = [
-  '#f94144','#f3722c','#f8961e','#f9844a','#f9c74f',
-  '#90be6d','#43aa8b','#4d908e','#577590','#277da1',
+  '#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f',
+  '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
 ]
 
 const LABEL_COLORS = [
-  '#f94144','#f3722c','#f8961e','#f9844a','#f9c74f',
-  '#90be6d','#43aa8b','#4d908e','#577590','#277da1',
+  '#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f',
+  '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
 ]
 
 /* ─── Global CSS ─────────────────────────────────────────────────────────────── */
@@ -55,7 +55,7 @@ const GLOBAL_CSS = `
           border: none !important; display: block !important; text-align: left !important; min-height: 100vh; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
-  input, textarea { caret-color: ${C.text} !important; }
+  input, textarea { caret-color: currentColor; }
   input:focus, textarea:focus { outline: none; }
   .task-card:hover { border-color: rgba(255,255,255,0.25) !important; transform: translateY(-1px); }
   .task-card:hover .chk-tr { opacity: 1 !important; }
@@ -96,9 +96,9 @@ function getWeekDates(offset = 0) {
   return Array.from({ length: 5 }, (_, i) => {
     const d = new Date(mon); d.setDate(mon.getDate() + i)
     return {
-      date:   d.toISOString().split('T')[0],
-      full:   d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
-      short:  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      date: d.toISOString().split('T')[0],
+      full: d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
+      short: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       dayNum: d.getDate(),
     }
   })
@@ -130,9 +130,9 @@ function templateBoard() {
   return {
     id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {},
     lists: [
-      { id: uid(), name: 'TO DO',       color: PALETTE[0], collapsed: false, tasks: [] },
+      { id: uid(), name: 'TO DO', color: PALETTE[0], collapsed: false, tasks: [] },
       { id: uid(), name: 'IN PROGRESS', color: PALETTE[1], collapsed: false, tasks: [] },
-      { id: uid(), name: 'DONE',        color: PALETTE[2], collapsed: false, tasks: [] },
+      { id: uid(), name: 'DONE', color: PALETTE[2], collapsed: false, tasks: [] },
     ],
   }
 }
@@ -140,21 +140,21 @@ function templateBoard() {
 /* ─── Editable ───────────────────────────────────────────────────────────────── */
 function Editable({ value, onChange, style }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft]     = useState(value)
+  const [draft, setDraft] = useState(value)
   const ref = useRef(null)
 
   useEffect(() => { setDraft(value) }, [value])
   useEffect(() => { if (editing && ref.current) ref.current.focus() }, [editing])
 
   if (!editing) {
-    return <span style={{ ...style, cursor: 'text' }} onClick={() => setEditing(true)}>{value}</span>
+    return <span className="renameable" style={{ ...style, cursor: 'text' }} onClick={() => setEditing(true)}>{value}</span>
   }
   return (
     <input ref={ref} value={draft}
       onChange={e => setDraft(e.target.value)}
       onBlur={() => { onChange(draft); setEditing(false) }}
       onKeyDown={e => {
-        if (e.key === 'Enter')  { onChange(draft); setEditing(false) }
+        if (e.key === 'Enter') { onChange(draft); setEditing(false) }
         if (e.key === 'Escape') { setDraft(value); setEditing(false) }
       }}
       style={{
@@ -232,8 +232,8 @@ function Confetti({ burst, onDone }) {
 
   if (!burst) return null
   const particles = Array.from({ length: 8 }, (_, i) => ({
-    dx:  Math.cos(Math.PI * 2 * i / 8 - Math.PI / 2) * 14,
-    dy:  Math.sin(Math.PI * 2 * i / 8 - Math.PI / 2) * 14,
+    dx: Math.cos(Math.PI * 2 * i / 8 - Math.PI / 2) * 14,
+    dy: Math.sin(Math.PI * 2 * i / 8 - Math.PI / 2) * 14,
     deg: 45 * i, id: i,
   }))
 
@@ -273,15 +273,15 @@ function DueBadge({ date }) {
 
 /* ─── ChecklistItem ──────────────────────────────────────────────────────────── */
 function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
-  const [active, setActive]   = useState(false)
-  const [draft, setDraft]     = useState(item.text)
+  const [active, setActive] = useState(false)
+  const [draft, setDraft] = useState(item.text)
   const [showDue, setShowDue] = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => { setDraft(item.text) }, [item.text])
   useEffect(() => { if (active && inputRef.current) inputRef.current.focus() }, [active])
 
-  const save   = () => { onRename(draft); setActive(false); setShowDue(false) }
+  const save = () => { onRename(draft); setActive(false); setShowDue(false) }
   const cancel = () => { setDraft(item.text); setActive(false); setShowDue(false) }
 
   return (
@@ -302,7 +302,7 @@ function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
         }}>
           {item.done && <svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }} onClick={() => !active && setActive(true)}>
+        <div style={{ flex: 1, minWidth: 0, cursor: active ? 'auto' : 'text' }} onClick={() => !active && setActive(true)}>
           {active ? (
             <textarea ref={inputRef} value={draft} onChange={e => setDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Escape') cancel() }} rows={2}
@@ -310,7 +310,7 @@ function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
             />
           ) : (
             <>
-              <span style={{ fontSize: 13, fontWeight: 500, fontFamily: FONT, color: item.done ? C.textMuted : C.textWhite, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'text', display: 'block' }}>
+              <span className="renameable" style={{ fontSize: 13, fontWeight: 500, fontFamily: FONT, color: item.done ? C.textMuted : C.textWhite, textDecoration: item.done ? 'line-through' : 'none', lineHeight: 1.4, cursor: 'text', display: 'block' }}>
                 {item.text}
               </span>
               {item.dueDate && (
@@ -367,9 +367,9 @@ function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
 
 /* ─── TaskPanel ──────────────────────────────────────────────────────────────── */
 function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor }) {
-  const ref     = useRef(null)
+  const ref = useRef(null)
   const itemRef = useRef(null)
-  const [newItem, setNewItem]       = useState('')
+  const [newItem, setNewItem] = useState('')
   const [editingDesc, setEditingDesc] = useState(false)
   const lc = listColor || C.accent
   const cl = task.checklist || []
@@ -381,13 +381,13 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor }) {
     return () => document.removeEventListener('mousedown', h)
   }, [onClose])
 
-  const addItem  = () => { if (!newItem.trim()) return; onUpdate({ ...task, checklist: [...cl, { id: uid(), text: newItem.trim(), done: false, dueDate: '' }] }); setNewItem('') }
-  const togItem  = id => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, done: !c.done } : c) })
-  const delItem  = id => onUpdate({ ...task, checklist: cl.filter(c => c.id !== id) })
-  const renItem  = (id, t) => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, text: t } : c) })
+  const addItem = () => { if (!newItem.trim()) return; onUpdate({ ...task, checklist: [...cl, { id: uid(), text: newItem.trim(), done: false, dueDate: '' }] }); setNewItem('') }
+  const togItem = id => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, done: !c.done } : c) })
+  const delItem = id => onUpdate({ ...task, checklist: cl.filter(c => c.id !== id) })
+  const renItem = (id, t) => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, text: t } : c) })
   const addLabel = () => onUpdate({ ...task, labels: [...task.labels, { id: uid(), name: 'LABEL', color: LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)] }] })
   const updLabel = (id, k, v) => onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, [k]: v } : l) })
-  const rmLabel  = id => onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
+  const rmLabel = id => onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
 
   const SideBtn = ({ label, icon, onClick }) => (
     <div onClick={onClick} style={{ padding: '7px 12px', borderRadius: 6, cursor: 'pointer', background: C.overlayW10, fontSize: 12, fontWeight: 600, color: C.textWhite, display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, transition: 'background .1s' }}
@@ -551,10 +551,77 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor }) {
 function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDelete, compact }) {
   const [panelOpen, setPanelOpen] = useState(false)
   const [burst, setBurst]         = useState(null)
-  const chkRef = useRef(null)
+  const [labelPopup, setLabelPopup] = useState(null)
+  const [labelDraft, setLabelDraft] = useState('')
+  const [quickEdit, setQuickEdit]         = useState(false)
+  const [editDraft, setEditDraft]         = useState('')
+  const [isHovered, setIsHovered]         = useState(false)
+  const [quickEditRect, setQuickEditRect] = useState(null)
+  const [labelsCompact, setLabelsCompact] = useState(false)
+  const [textHovered, setTextHovered]     = useState(false)
+  const [chkHovered, setChkHovered]       = useState(false)
+  const chkRef        = useRef(null)
+  const labelPopupRef = useRef(null)
+  const editRef       = useRef(null)
+  const cardRef       = useRef(null)
+  const quickMenuRef  = useRef(null)
   const lc = listColor || C.accent
   const cl = task.checklist || []
   const clDone = cl.filter(c => c.done).length
+
+  const openQuickEdit = () => {
+    setEditDraft(task.text)
+    const r = cardRef.current?.getBoundingClientRect()
+    setQuickEditRect(r ? { top: r.top, right: r.right, left: r.left, bottom: r.bottom } : null)
+    setQuickEdit(true)
+  }
+  const closeQuickEdit = () => { setQuickEdit(false); setQuickEditRect(null) }
+  const saveEdit = () => { if (editDraft.trim()) onUpdate({ ...task, text: editDraft.trim() }); closeQuickEdit() }
+
+  useEffect(() => { if (quickEdit && editRef.current) editRef.current.focus() }, [quickEdit])
+
+  useEffect(() => {
+    if (!quickEdit) return
+    const h = e => {
+      if (cardRef.current?.contains(e.target) || quickMenuRef.current?.contains(e.target)) return
+      closeQuickEdit()
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [quickEdit])
+
+  useEffect(() => {
+    if (!isHovered || quickEdit) return
+    const h = e => {
+      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
+      if (e.key === 'e' || e.key === 'E') { e.preventDefault(); openQuickEdit() }
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [isHovered, quickEdit, task.text])
+
+  useEffect(() => {
+    if (!labelPopup) return
+    const h = e => { if (labelPopupRef.current && !labelPopupRef.current.contains(e.target)) setLabelPopup(null) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [labelPopup])
+
+  const openLabelPopup = (e, id) => {
+    e.stopPropagation()
+    const l = task.labels.find(l => l.id === id)
+    setLabelDraft(l?.name || '')
+    setLabelPopup(id)
+  }
+  const addLabel = e => {
+    e.stopPropagation()
+    const nl = { id: uid(), name: 'LABEL', color: LABEL_COLORS[0] }
+    onUpdate({ ...task, labels: [...task.labels, nl] })
+    setLabelDraft('LABEL')
+    setLabelPopup(nl.id)
+  }
+  const updLabel = (k, v) => onUpdate({ ...task, labels: task.labels.map(l => l.id === labelPopup ? { ...l, [k]: v } : l) })
+  const rmLabel = () => { onUpdate({ ...task, labels: task.labels.filter(l => l.id !== labelPopup) }); setLabelPopup(null) }
 
   const handleToggle = e => {
     e.stopPropagation()
@@ -567,8 +634,10 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
 
   return (
     <>
-      <div className="task-card" draggable
-        onClick={() => setPanelOpen(true)}
+      <div ref={cardRef} className="task-card" draggable
+        onClick={() => { if (!quickEdit) setPanelOpen(true) }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('taskId', task.id); e.dataTransfer.setData('sourceListId', listId); e.dataTransfer.effectAllowed = 'move' }}
         style={{
           background: '#1E2328', borderRadius: 12,
@@ -579,17 +648,54 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
           transition: 'border-color .15s, transform .12s',
         }}
       >
-        {/* Label colour bars */}
+        {/* Label pills */}
         {task.labels.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-            {task.labels.map(l => <div key={l.id} style={{ height: 6, width: 36, borderRadius: 3, background: l.color }} />)}
-          </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, alignItems: 'center' }} onClick={e => { e.stopPropagation(); setLabelsCompact(c => !c) }}>
+          {task.labels.map(l => (
+            labelsCompact
+              ? <div key={l.id} style={{ height: 8, width: 36, borderRadius: 3, background: l.color, cursor: 'pointer' }} />
+              : <div key={l.id} className="renameable" style={{ display: 'inline-flex', alignItems: 'center', background: l.color, borderRadius: 6, padding: '5px 9px', fontSize: 10, fontWeight: 800, color: C.textWhite, letterSpacing: 0.6, fontFamily: FONT, cursor: 'pointer', userSelect: 'none' }}>
+                  {l.name}
+                </div>
+          ))}
+        </div>
         )}
 
-        {/* Task text */}
-        <div style={{ fontSize: 14, fontWeight: 600, color: C.textWhite, lineHeight: 1.5, paddingRight: 32, textDecoration: task.done ? 'line-through' : 'none', marginBottom: 12 }}>
-          {task.text}
-        </div>
+        {/* Task text row */}
+        {quickEdit ? (
+          <div onClick={e => e.stopPropagation()} style={{ marginBottom: 12 }}>
+            <textarea ref={editRef} value={editDraft} onChange={e => setEditDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() } if (e.key === 'Escape') closeQuickEdit() }}
+              rows={3} style={{ width: '100%', background: C.overlayW10, border: 'none', borderRadius: 6, padding: '8px 10px', outline: 'none', fontSize: 14, fontWeight: 600, color: C.textWhite, fontFamily: FONT, lineHeight: 1.5, resize: 'none' }} />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 12 }}>
+            <div ref={chkRef} onClick={handleToggle} style={{
+              width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, marginTop: 2,
+              border: task.done ? 'none' : `2px solid ${chkHovered ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.22)'}`,
+              background: task.done ? lc : chkHovered ? C.overlayW10 : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: (task.done || textHovered || chkHovered) ? 1 : 0,
+              transition: 'opacity .15s, border-color .15s, background .15s',
+            }}
+              onMouseEnter={() => setChkHovered(true)}
+              onMouseLeave={() => setChkHovered(false)}>
+              {task.done && <svg width="9" height="9" viewBox="0 0 12 12" className={burst ? 'check-bounce' : ''}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            </div>
+            <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: task.done ? C.textMuted : C.textWhite, lineHeight: 1.5, textDecoration: task.done ? 'line-through' : 'none', transform: chkHovered ? 'translateX(4px)' : 'translateX(0)', transition: 'transform .15s' }}
+              onMouseEnter={() => setTextHovered(true)}
+              onMouseLeave={() => setTextHovered(false)}>
+              {task.text}
+            </div>
+            <div onClick={e => { e.stopPropagation(); openQuickEdit() }} className="chk-tr" style={{
+              width: 22, height: 22, borderRadius: 6, cursor: 'pointer', flexShrink: 0,
+              background: C.overlayW10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: 0, transition: 'opacity .15s',
+            }}>
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </div>
+          </div>
+        )}
 
         {/* Badges row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -617,22 +723,6 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
           )}
         </div>
 
-        {/* Checkmark top-right (visible on hover) */}
-        <div style={{ position: 'absolute', top: 10, right: 10 }} onClick={e => e.stopPropagation()}>
-          <div ref={chkRef} onClick={handleToggle} className="chk-tr" style={{
-            width: 22, height: 22, borderRadius: '50%', cursor: 'pointer',
-            border: task.done ? 'none' : '2px solid rgba(255,255,255,0.18)',
-            background: task.done ? lc : 'transparent',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            opacity: 0, transition: 'opacity .15s',
-          }}>
-            {task.done && (
-              <svg width="10" height="10" viewBox="0 0 12 12" className={burst ? 'check-bounce' : ''}>
-                <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </div>
-        </div>
       </div>
 
       <Confetti burst={burst} onDone={() => setBurst(null)} />
@@ -640,15 +730,46 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         <TaskPanel task={task} onUpdate={onUpdate} onDelete={onDelete}
           onClose={() => setPanelOpen(false)} listColor={lc} listName={listName || 'List'} />
       )}
+      {quickEdit && quickEditRect && (() => {
+        const menuW = 210
+        const spaceRight = window.innerWidth - quickEditRect.right - 8
+        const left = spaceRight >= menuW ? quickEditRect.right + 8 : quickEditRect.left - menuW - 8
+        const top  = Math.min(quickEditRect.top, window.innerHeight - 280)
+        const QItem = ({ icon, label, color, onClick }) => (
+          <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+            {icon}<span>{label}</span>
+          </div>
+        )
+        return (
+          <div ref={quickMenuRef} onClick={e => e.stopPropagation()} style={{ position: 'fixed', top, left, zIndex: 10001, width: menuW, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.65)', overflow: 'hidden', fontFamily: FONT }}>
+            <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${C.border}` }}>
+              <button onClick={saveEdit} style={{ width: '100%', background: lc, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 800, color: '#fff', cursor: 'pointer', fontFamily: FONT, letterSpacing: 0.3 }}>Save</button>
+            </div>
+            <div style={{ padding: '4px 0' }}>
+              <QItem label="Open card" onClick={() => { closeQuickEdit(); saveEdit(); setPanelOpen(true) }}
+                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke={C.textMuted} strokeWidth="1.3"/><line x1="5" y1="8" x2="11" y2="8" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/><line x1="8" y1="5" x2="8" y2="11" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
+              <QItem label="Edit labels" onClick={() => { closeQuickEdit(); addLabel({ stopPropagation: () => {} }) }}
+                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L7.5 3l5 5-5.5 5.5a1 1 0 01-.7.3H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7z" stroke={C.textMuted} strokeWidth="1.3"/><circle cx="5.5" cy="10.5" r="1" fill={C.textMuted}/></svg>} />
+              <QItem label="Edit due date" onClick={() => { closeQuickEdit(); setPanelOpen(true) }}
+                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textMuted} strokeWidth="1.3"/><line x1="2" y1="7" x2="14" y2="7" stroke={C.textMuted} strokeWidth="1.3"/><line x1="6" y1="1" x2="6" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/><line x1="10" y1="1" x2="10" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
+              <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
+              <QItem label="Delete card" color={C.danger} onClick={() => { closeQuickEdit(); onDelete() }}
+                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M5 7v5M8 7v5M11 7v5" stroke={C.danger} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
+            </div>
+          </div>
+        )
+      })()}
     </>
   )
 }
 
 /* ─── TaskList ───────────────────────────────────────────────────────────────── */
 function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd }) {
-  const [showCP, setShowCP]     = useState(false)
+  const [showCP, setShowCP] = useState(false)
   const [taskText, setTaskText] = useState('')
-  const [adding, setAdding]     = useState(false)
+  const [adding, setAdding] = useState(false)
   const inputRef = useRef(null)
 
   useEffect(() => { if (adding && inputRef.current) inputRef.current.focus() }, [adding])
@@ -775,19 +896,19 @@ function MiniCalendar({ onPickDate, onClose }) {
     return () => document.removeEventListener('mousedown', h)
   }, [onClose])
 
-  const year  = viewDate.getFullYear()
+  const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
   const monthName = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()
 
-  const firstDay  = new Date(year, month, 1)
-  const startDay  = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
+  const firstDay = new Date(year, month, 1)
+  const startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
   const daysInMon = new Date(year, month + 1, 0).getDate()
   const cells = []
   for (let i = 0; i < startDay; i++) cells.push(null)
   for (let d = 1; d <= daysInMon; d++) cells.push(d)
 
   const t = todayStr()
-  const DAY_LABELS = ['MO','TU','WE','TH','FR','SA','SU']
+  const DAY_LABELS = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
 
   return (
     <div ref={ref} style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 8, zIndex: 200, background: C.card, borderRadius: R, padding: 16, width: 280, boxShadow: `0 16px 48px ${C.shadowDeep}`, fontFamily: FONT }}>
@@ -806,7 +927,7 @@ function MiniCalendar({ onPickDate, onClose }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
         {cells.map((day, i) => {
           if (day === null) return <div key={`e${i}`} />
-          const ds = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+          const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
           const isT = ds === t
           return (
             <div key={i} onClick={() => { onPickDate(ds); onClose() }} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: isT ? C.textWhite : C.text, background: isT ? C.accent : 'transparent', borderRadius: 8, padding: '6px 0', cursor: 'pointer', transition: 'background .1s' }}
@@ -823,8 +944,8 @@ function MiniCalendar({ onPickDate, onClose }) {
 
 /* ─── AgendaDay ──────────────────────────────────────────────────────────────── */
 function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, onUpdate, onDelete, onAddTask }) {
-  const [adding, setAdding]       = useState(false)
-  const [taskText, setTaskText]   = useState('')
+  const [adding, setAdding] = useState(false)
+  const [taskText, setTaskText] = useState('')
   const [selListId, setSelListId] = useState(lists[0]?.id || '')
   const inputRef = useRef(null)
 
@@ -836,31 +957,31 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
     setTaskText('')
   }
 
-  const addTag    = () => onUpdateTags([...tags, { id: uid(), name: 'TAG', color: LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)] }])
-  const updTag    = (id, k, v) => onUpdateTags(tags.map(t => t.id === id ? { ...t, [k]: v } : t))
+  const addTag = () => onUpdateTags([...tags, { id: uid(), name: 'TAG', color: LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)] }])
+  const updTag = (id, k, v) => onUpdateTags(tags.map(t => t.id === id ? { ...t, [k]: v } : t))
   const removeTag = id => onUpdateTags(tags.filter(t => t.id !== id))
 
-  const numStr  = String(day.dayNum).padStart(2, '0')
+  const numStr = String(day.dayNum).padStart(2, '0')
   const dayAbbr = day.full.slice(0, 2)
 
   return (
-    <div style={{ display: 'flex', minHeight: 100, borderBottom: `1px solid ${C.border}` }}>
+    <div style={{ display: 'flex', flex: 1, minHeight: 0, borderBottom: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
       {/* ── Left: large date ── */}
-      <div style={{ width: 140, flexShrink: 0, padding: '28px 24px 28px 0', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start' }}>
-        <div style={{ fontSize: 96, fontWeight: 900, lineHeight: 1, letterSpacing: -5, fontFamily: FONT, color: isToday ? C.accent : C.textWhite }}>
+      <div style={{ width: 110, flexShrink: 0, padding: '12px 18px 12px 0', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1, letterSpacing: -3, fontFamily: FONT, color: isToday ? C.accent : C.textWhite }}>
           {numStr}
         </div>
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: 3, marginTop: 6, fontFamily: FONT, color: isToday ? C.accent : C.textMuted }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 3, marginTop: 4, fontFamily: FONT, color: isToday ? C.accent : C.textMuted }}>
           {dayAbbr}
         </div>
       </div>
 
       {/* ── Vertical rule ── */}
-      <div style={{ width: 1, background: C.border, flexShrink: 0, margin: '20px 0' }} />
+      <div style={{ width: 1, background: C.border, flexShrink: 0, margin: '12px 0' }} />
 
       {/* ── Right: events ── */}
-      <div style={{ flex: 1, padding: '28px 0 28px 36px', minWidth: 0 }}>
+      <div style={{ flex: 1, padding: '10px 0 10px 24px', minWidth: 0, overflowY: 'auto' }}>
 
         {/* Day tags row */}
         {tags.length > 0 && (
@@ -879,7 +1000,7 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
               <line x1="2" y1="7" x2="14" y2="7" stroke={C.textMuted} strokeWidth="1.3" />
               <line x1="6" y1="1" x2="6" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" />
             </svg>
-            There is no event set
+            No task planned yet
           </div>
         )}
 
@@ -891,7 +1012,7 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
               {t.startTime || t.endTime ? (
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, fontFamily: FONT, letterSpacing: 0.2, lineHeight: 1.5 }}>
                   {t.startTime && <div>{t.startTime}</div>}
-                  {t.endTime   && <div style={{ opacity: 0.6 }}>– {t.endTime}</div>}
+                  {t.endTime && <div style={{ opacity: 0.6 }}>– {t.endTime}</div>}
                 </div>
               ) : (
                 <div style={{ fontSize: 11, color: C.textMuted, opacity: 0.4, fontFamily: FONT }}>—</div>
@@ -925,7 +1046,7 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <input ref={inputRef} value={taskText} onChange={e => setTaskText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { handleAdd(); if (!taskText.trim()) setAdding(false) } if (e.key === 'Escape') { setTaskText(''); setAdding(false) } }}
-              placeholder="Event name…"
+              placeholder="Task name…"
               style={{ flex: 1, minWidth: 160, border: 'none', borderRadius: 8, padding: '9px 14px', fontSize: 13, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
             <select value={selListId} onChange={e => setSelListId(e.target.value)}
               style={{ border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 11, fontFamily: FONT, fontWeight: 800, outline: 'none', background: C.border, color: C.textWhite, cursor: 'pointer' }}>
@@ -938,7 +1059,7 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
             onMouseEnter={e => { e.currentTarget.style.color = C.textWhite }}
             onMouseLeave={e => { e.currentTarget.style.color = C.textMuted }}>
             <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" /></svg>
-            ADD EVENT
+            ADD TASK
           </button>
         )}
       </div>
@@ -958,11 +1079,11 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
 /* ─── AgendaView ─────────────────────────────────────────────────────────────── */
 function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
   const [weekOffset, setWeekOffset] = useState(0)
-  const [calOpen, setCalOpen]       = useState(false)
+  const [calOpen, setCalOpen] = useState(false)
 
-  const weekDays  = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const weekDays = useMemo(() => getWeekDates(weekOffset), [weekOffset])
   const weekLabel = useMemo(() => getWeekLabel(weekOffset), [weekOffset])
-  const today     = todayStr()
+  const today = todayStr()
 
   const jumpToDate = ds => {
     if (!ds) return
@@ -978,8 +1099,8 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
 
   useEffect(() => {
     const h = e => {
-      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
-      if (e.key === 'ArrowLeft')  setWeekOffset(w => w - 1)
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+      if (e.key === 'ArrowLeft') setWeekOffset(w => w - 1)
       if (e.key === 'ArrowRight') setWeekOffset(w => w + 1)
     }
     window.addEventListener('keydown', h)
@@ -1011,9 +1132,9 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Week navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 0 24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '20px 0 16px', flexShrink: 0 }}>
         <ArrowBtn dir="l" onClick={() => setWeekOffset(w => w - 1)} />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span onMouseDown={e => e.stopPropagation()} onClick={() => setCalOpen(!calOpen)}
@@ -1028,23 +1149,25 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
         <ArrowBtn dir="r" onClick={() => setWeekOffset(w => w + 1)} />
       </div>
 
-      {weekDays.map(day => (
-        <AgendaDay key={day.date} day={day} tasks={tasksByDate[day.date] || []}
-          isToday={day.date === today} lists={lists}
-          tags={dayTags[day.date] || []}
-          onUpdateTags={tags => onUpdateDayTags(day.date, tags)}
-          onToggle={togTask} onUpdate={updTask} onDelete={delTask} onAddTask={addTask} />
-      ))}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {weekDays.map(day => (
+          <AgendaDay key={day.date} day={day} tasks={tasksByDate[day.date] || []}
+            isToday={day.date === today} lists={lists}
+            tags={dayTags[day.date] || []}
+            onUpdateTags={tags => onUpdateDayTags(day.date, tags)}
+            onToggle={togTask} onUpdate={updTask} onDelete={delTask} onAddTask={addTask} />
+        ))}
+      </div>
     </div>
   )
 }
 
 /* ─── DayView ────────────────────────────────────────────────────────────────── */
 function DayView({ lists, onToggleTask, onToggleChecklist }) {
-  const now   = new Date()
+  const now = new Date()
   const today = todayStr()
 
-  const dayLabel  = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+  const dayLabel = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
   const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
 
   const allTasks = lists
@@ -1124,7 +1247,7 @@ function DayView({ lists, onToggleTask, onToggleChecklist }) {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {task.dueDate && <DueBadge date={task.dueDate} />}
-                    <span style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, background: lc + '20', padding: '2px 7px', borderRadius: 10 }}>{task._listName}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: lc, background: lc + '35', padding: '2px 7px', borderRadius: 10 }}>{task._listName}</span>
                   </div>
                 </div>
 
@@ -1164,37 +1287,37 @@ function DayView({ lists, onToggleTask, onToggleChecklist }) {
 
 /* ─── BoardDetail ────────────────────────────────────────────────────────────── */
 function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, onDeleteBoard }) {
-  const [view, setView]               = useState('day')
-  const [taskDrop, setTaskDrop]       = useState(null)
-  const [newName, setNewName]         = useState('')
-  const [weekFilter, setWeekFilter]   = useState(false)
-  const [weekOffset, setWeekOffset]   = useState(0)
+  const [view, setView] = useState('day')
+  const [taskDrop, setTaskDrop] = useState(null)
+  const [newName, setNewName] = useState('')
+  const [weekFilter, setWeekFilter] = useState(false)
+  const [weekOffset, setWeekOffset] = useState(0)
   const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft]   = useState(board.name)
+  const [titleDraft, setTitleDraft] = useState(board.name)
   const newInputRef = useRef(null)
 
   useEffect(() => { setTitleDraft(board.name) }, [board.name])
 
   const saveTitle = () => { if (titleDraft.trim()) onUpdate({ ...board, name: titleDraft.trim() }); setEditingTitle(false) }
 
-  const weekDays  = useMemo(() => getWeekDates(weekOffset), [weekOffset])
+  const weekDays = useMemo(() => getWeekDates(weekOffset), [weekOffset])
   const weekLabel = useMemo(() => getWeekLabel(weekOffset), [weekOffset])
-  const today     = todayStr()
+  const today = todayStr()
 
-  const lists   = board.lists
+  const lists = board.lists
   const dayTags = board.dayTags || {}
 
-  const setLists   = updater => { const next = typeof updater === 'function' ? updater(lists) : updater; onUpdate({ ...board, lists: next }) }
+  const setLists = updater => { const next = typeof updater === 'function' ? updater(lists) : updater; onUpdate({ ...board, lists: next }) }
   const updDayTags = (date, tags) => onUpdate({ ...board, dayTags: { ...dayTags, [date]: tags } })
-  const updList    = (id, u) => setLists(p => p.map(l => l.id === id ? u : l))
-  const togTask    = (lid, tid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t) } : l))
-  const togChecklist = (lid, tid, iid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, checklist: (t.checklist||[]).map(ci => ci.id === iid ? { ...ci, done: !ci.done } : ci) } : t) } : l))
-  const delList    = id => setLists(p => p.filter(l => l.id !== id))
-  const addList    = () => setLists(p => [...p, { id: uid(), name: 'NEW LIST', color: PALETTE[p.length % PALETTE.length], collapsed: false, tasks: [] }])
+  const updList = (id, u) => setLists(p => p.map(l => l.id === id ? u : l))
+  const togTask = (lid, tid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t) } : l))
+  const togChecklist = (lid, tid, iid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, checklist: (t.checklist || []).map(ci => ci.id === iid ? { ...ci, done: !ci.done } : ci) } : t) } : l))
+  const delList = id => setLists(p => p.filter(l => l.id !== id))
+  const addList = () => setLists(p => [...p, { id: uid(), name: 'NEW LIST', color: PALETTE[p.length % PALETTE.length], collapsed: false, tasks: [] }])
 
   // ── List drag ──
   const [dragListId, setDragListId] = useState(null)
-  const [dropIndex,  setDropIndex]  = useState(null)
+  const [dropIndex, setDropIndex] = useState(null)
 
   const handleListDragStart = (e, listId) => {
     setDragListId(listId)
@@ -1205,8 +1328,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     if (!e.dataTransfer.types.includes('listid')) return
     e.preventDefault()
     const fromIdx = lists.findIndex(l => l.id === dragListId)
-    const toIdx   = lists.findIndex(l => l.id === hoveredListId)
-    const r   = e.currentTarget.getBoundingClientRect()
+    const toIdx = lists.findIndex(l => l.id === hoveredListId)
+    const r = e.currentTarget.getBoundingClientRect()
     const raw = e.clientX < r.left + r.width / 2 ? toIdx : toIdx + 1
     setDropIndex(fromIdx < raw ? raw - 1 : raw)
   }
@@ -1266,14 +1389,14 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   )
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: FONT }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
 
       {/* ════════════════ LEFT SIDEBAR ════════════════ */}
       <div style={{ width: 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
 
         {/* Branding */}
         <div style={{ padding: '24px 16px 20px' }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT }}>PLANNA</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT }}>PLAN</div>
         </div>
 
         <div style={{ height: 1, background: C.border, margin: '0 16px 12px' }} />
@@ -1323,7 +1446,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       </div>
 
       {/* ════════════════ MAIN CONTENT ════════════════ */}
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflow: view === 'agenda' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* ── Top bar ── */}
         <div style={{ padding: '28px 36px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, borderBottom: `1px solid ${C.border}` }}>
@@ -1336,10 +1459,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 onChange={e => setTitleDraft(e.target.value)}
                 onBlur={saveTitle}
                 onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setTitleDraft(board.name); setEditingTitle(false) } }}
-                style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: C.textWhite }}
+                style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: board.color }}
               />
             ) : (
-              <h1 onClick={() => setEditingTitle(true)} style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text' }}>{board.name}</h1>
+              <h1 className="renameable" onClick={() => setEditingTitle(true)} style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text' }}>{board.name}</h1>
             )}
           </div>
 
@@ -1352,7 +1475,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               </div>
               {weekFilter && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {[['l','M10 4l-4 4 4 4'],['r','M6 4l4 4-4 4']].map(([dir, path]) => (
+                  {[['l', 'M10 4l-4 4 4 4'], ['r', 'M6 4l4 4-4 4']].map(([dir, path]) => (
                     <div key={dir} onClick={() => setWeekOffset(w => dir === 'l' ? w - 1 : w + 1)} style={{ width: 26, height: 26, borderRadius: 6, cursor: 'pointer', background: C.border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
                       onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
@@ -1364,7 +1487,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                   <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
                     {weekDays.map(day => (
                       <div key={day.date} style={{ minWidth: 32, height: 32, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: day.date === today ? C.accent : C.border }}>
-                        <span style={{ fontSize: 6, fontWeight: 800, fontFamily: FONT, color: day.date === today ? C.textWhite : C.textMuted, letterSpacing: 0.5 }}>{day.full.slice(0,2)}</span>
+                        <span style={{ fontSize: 6, fontWeight: 800, fontFamily: FONT, color: day.date === today ? C.textWhite : C.textMuted, letterSpacing: 0.5 }}>{day.full.slice(0, 2)}</span>
                         <span style={{ fontSize: 12, fontWeight: 900, fontFamily: FONT, color: C.textWhite }}>{day.dayNum}</span>
                       </div>
                     ))}
@@ -1379,7 +1502,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         {view === 'board' && (
           <div style={{ padding: '32px 36px 40px' }}>
             <div className="board-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, alignItems: 'start' }}
-              onDragOver={handleGridDragOver}
+              onDragOver={e => { if (e.dataTransfer.types.includes('listid')) e.preventDefault() }}
               onDrop={handleListDrop}>
               {filteredLists.map((list, idx) => (
                 <Fragment key={list.id}>
@@ -1413,7 +1536,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
 
         {/* ── Agenda ── */}
         {view === 'agenda' && (
-          <div style={{ padding: '32px 36px 40px' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0 36px' }}>
             <AgendaView lists={lists} onUpdateLists={setLists} dayTags={dayTags} onUpdateDayTags={updDayTags} />
           </div>
         )}
@@ -1440,11 +1563,11 @@ export default function App() {
   const [newBoardName, setNewBoardName] = useState('')
 
   useEffect(() => {
-    try { localStorage.setItem('planner-boards', JSON.stringify(boards)) } catch {}
+    try { localStorage.setItem('planner-boards', JSON.stringify(boards)) } catch { }
   }, [boards])
 
   useEffect(() => {
-    if (activeBoardId) try { localStorage.setItem('planner-active', activeBoardId) } catch {}
+    if (activeBoardId) try { localStorage.setItem('planner-active', activeBoardId) } catch { }
   }, [activeBoardId])
 
   const createBoard = name => {
@@ -1473,7 +1596,7 @@ export default function App() {
         <style>{GLOBAL_CSS}</style>
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', maxWidth: 360, padding: 20 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLANNA</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLAN</div>
             <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 32 }}>Create your first board to get started</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
               <input autoFocus value={newBoardName} onChange={e => setNewBoardName(e.target.value)}
@@ -1489,7 +1612,7 @@ export default function App() {
                 onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: C.textWhite, marginBottom: 8 }}>Kanban Board</div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {[['TO DO','#FF573B'],['IN PROGRESS','#0988EF'],['DONE','#018848']].map(([l, c]) => (
+                  {[['TO DO', '#FF573B'], ['IN PROGRESS', '#0988EF'], ['DONE', '#018848']].map(([l, c]) => (
                     <span key={l} style={{ background: c, borderRadius: 4, padding: '3px 10px', fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>{l}</span>
                   ))}
                 </div>
