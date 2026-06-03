@@ -936,11 +936,11 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         const spaceRight = window.innerWidth - quickEditRect.right - 8
         const left = spaceRight >= menuW ? quickEditRect.right + 8 : quickEditRect.left - menuW - 8
         const top = Math.min(quickEditRect.top, window.innerHeight - (isLabels ? 420 : 280))
-        const QItem = ({ icon, label, color, onClick }) => (
-          <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
+        const QItem = ({ label, color, onClick }) => (
+          <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
             onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-            {icon}<span>{label}</span>
+            <span>{label}</span>
           </div>
         )
         return (
@@ -975,15 +975,11 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
                   <button onClick={saveEdit} style={{ width: '100%', background: lc, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 800, color: '#fff', cursor: 'pointer', fontFamily: FONT, letterSpacing: 0.3 }}>Save</button>
                 </div>
                 <div style={{ padding: '4px 0' }}>
-                  <QItem label="Open card" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }}
-                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke={C.textMuted} strokeWidth="1.3" /><line x1="5" y1="8" x2="11" y2="8" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="8" y1="5" x2="8" y2="11" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
-                  <QItem label="Edit labels" onClick={() => setQView('labels')}
-                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L7.5 3l5 5-5.5 5.5a1 1 0 01-.7.3H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7z" stroke={C.textMuted} strokeWidth="1.3" /><circle cx="5.5" cy="10.5" r="1" fill={C.textMuted} /></svg>} />
-                  <QItem label="Edit due date" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }}
-                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textMuted} strokeWidth="1.3" /><line x1="2" y1="7" x2="14" y2="7" stroke={C.textMuted} strokeWidth="1.3" /><line x1="6" y1="1" x2="6" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="10" y1="1" x2="10" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
+                  <QItem label="Open card" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }} />
+                  <QItem label="Edit labels" onClick={() => setQView('labels')} />
+                  <QItem label="Edit due date" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }} />
                   <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
-                  <QItem label="Delete card" color={C.danger} onClick={() => { closeQuickEdit(); onDelete() }}
-                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M5 7v5M8 7v5M11 7v5" stroke={C.danger} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
+                  <QItem label="Delete card" color={C.danger} onClick={() => { closeQuickEdit(); onDelete() }} />
                 </div>
               </>
             )}
@@ -995,13 +991,39 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
 }
 
 /* ─── TaskList ───────────────────────────────────────────────────────────────── */
-function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
+function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, boards, currentBoardId, onMoveToBoard,
+  taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
   focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone,
   boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
-  const [showCP, setShowCP] = useState(false)
-  const [taskText, setTaskText] = useState('')
-  const [adding, setAdding] = useState(false)
-  const inputRef = useRef(null)
+  const [showCP, setShowCP]           = useState(false)
+  const [showMenu, setShowMenu]       = useState(false)
+  const [menuPos, setMenuPos]         = useState(null)
+  const [showCPMenu, setShowCPMenu]   = useState(false)
+  const [showBoardPicker, setShowBoardPicker] = useState(false)
+  const [taskText, setTaskText]   = useState('')
+  const [adding, setAdding]       = useState(false)
+  const inputRef  = useRef(null)
+  const menuRef   = useRef(null)
+  const menuBtnRef = useRef(null)
+
+  useEffect(() => {
+    if (!showMenu) return
+    const h = e => {
+      if (!menuRef.current?.contains(e.target) && !menuBtnRef.current?.contains(e.target)) {
+        setShowMenu(false); setShowCPMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [showMenu])
+
+  const openMenu = e => {
+    e.stopPropagation()
+    const r = menuBtnRef.current?.getBoundingClientRect()
+    if (r) setMenuPos({ top: r.bottom + 6, left: Math.min(r.left, window.innerWidth - 220) })
+    setShowMenu(v => !v)
+    setShowCPMenu(false)
+  }
 
   useEffect(() => { if (adding && inputRef.current) inputRef.current.focus() }, [adding])
 
@@ -1064,14 +1086,10 @@ function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDr
             {list.tasks.length} {list.tasks.length === 1 ? 'TASK' : 'TASKS'}
           </span>
           <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
-            <div style={{ position: 'relative' }}>
-              <div onMouseDown={e => e.stopPropagation()} onClick={() => setShowCP(!showCP)} style={{ width: 20, height: 20, borderRadius: 6, background: C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 10, height: 10, borderRadius: 3, background: C.overlayB20 }} />
-              </div>
-              {showCP && <ColorPicker colors={PALETTE} current={list.color} onPick={c => updList({ color: c })} onClose={() => setShowCP(false)} />}
+          <div onClick={e => e.stopPropagation()}>
+            <div ref={menuBtnRef} onClick={openMenu} style={{ width: 28, height: 28, borderRadius: 8, background: C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: C.overlayB40 }} />)}
             </div>
-            <div onClick={onDelete} style={{ width: 20, height: 20, borderRadius: 6, background: C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: C.overlayB40, fontWeight: 700 }}>×</div>
           </div>
         </div>
         <svg width="12" height="12" viewBox="0 0 12 12" style={{ position: 'absolute', bottom: 8, left: '50%', transform: `translateX(-50%) rotate(${list.collapsed ? '180deg' : '0deg'})`, transition: 'transform .2s', opacity: 0.3 }}>
@@ -1128,6 +1146,81 @@ function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDr
             </div>
           )}
         </ul>
+      )}
+      {showMenu && menuPos && (
+        <div ref={menuRef} onClick={e => e.stopPropagation()} style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 10002, width: 210, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: FONT }}>
+          <div style={{ padding: '16px 14px 14px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.textWhite, letterSpacing: 0.3 }}>List actions</span>
+            <div onClick={() => setShowMenu(false)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: C.textMuted, fontSize: 18, lineHeight: 1 }}>×</div>
+          </div>
+          {[
+            { label: 'Add task',  fn: () => { setAdding(true); setShowMenu(false) } },
+            { label: 'Copy list', fn: () => { onCopy?.(); setShowMenu(false) } },
+          ].map(({ label, fn }) => (
+            <div key={label} onClick={fn} style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.textWhite, transition: 'background .1s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+              {label}
+            </div>
+          ))}
+          <div>
+            <div style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600, color: C.textWhite }}>
+              Move list
+            </div>
+            <div style={{ display: 'flex', gap: 6, padding: '0 14px 10px', alignItems: 'center' }}>
+              <div onClick={() => { if (canMoveLeft) { onMoveLeft?.(); setShowMenu(false) } }} style={{ flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 6, background: canMoveLeft ? C.overlayW10 : C.border, opacity: canMoveLeft ? 1 : 0.35, cursor: canMoveLeft ? 'pointer' : 'default', fontSize: 13, color: C.textWhite, transition: 'background .1s' }}
+                onMouseEnter={e => { if (canMoveLeft) e.currentTarget.style.background = C.overlayW20 }}
+                onMouseLeave={e => { if (canMoveLeft) e.currentTarget.style.background = C.overlayW10 }}>← Left</div>
+              <div onClick={() => { if (canMoveRight) { onMoveRight?.(); setShowMenu(false) } }} style={{ flex: 1, textAlign: 'center', padding: '6px 0', borderRadius: 6, background: canMoveRight ? C.overlayW10 : C.border, opacity: canMoveRight ? 1 : 0.35, cursor: canMoveRight ? 'pointer' : 'default', fontSize: 13, color: C.textWhite, transition: 'background .1s' }}
+                onMouseEnter={e => { if (canMoveRight) e.currentTarget.style.background = C.overlayW20 }}
+                onMouseLeave={e => { if (canMoveRight) e.currentTarget.style.background = C.overlayW10 }}>Right →</div>
+            </div>
+            <div onClick={() => setShowBoardPicker(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.textWhite, transition: 'background .1s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+              Move to board
+              <svg width="10" height="10" viewBox="0 0 12 12" style={{ marginLeft: 'auto', transform: showBoardPicker ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none"><path d="M2 4l4 4 4-4" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </div>
+            {showBoardPicker && (
+              <div style={{ padding: '0 10px 8px' }}>
+                {(boards || []).filter(b => b.id !== currentBoardId).map(b => (
+                  <div key={b.id} onClick={() => { onMoveToBoard?.(b.id); setShowMenu(false) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: C.textWhite, transition: 'background .1s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: b.color, flexShrink: 0 }} />
+                    {b.name}
+                  </div>
+                ))}
+                {(boards || []).filter(b => b.id !== currentBoardId).length === 0 && (
+                  <div style={{ padding: '6px 10px', fontSize: 11, color: C.textMuted, fontFamily: FONT }}>No other boards</div>
+                )}
+              </div>
+            )}
+          </div>
+          <div style={{ height: 1, background: C.border }} />
+          <div onClick={() => setShowCPMenu(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.textWhite, transition: 'background .1s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+            <div style={{ width: 14, height: 14, borderRadius: 4, background: list.color, flexShrink: 0 }} />
+            Change list color
+            <svg width="10" height="10" viewBox="0 0 12 12" style={{ marginLeft: 'auto', transform: showCPMenu ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none"><path d="M2 4l4 4 4-4" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </div>
+          {showCPMenu && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '6px 14px 10px' }}>
+              {PALETTE.map(c => (
+                <div key={c} onClick={() => { updList({ color: c }); setShowMenu(false); setShowCPMenu(false) }} style={{ width: 22, height: 22, borderRadius: 6, background: c, cursor: 'pointer', border: c === list.color ? `2px solid ${C.textWhite}` : '2px solid transparent', transition: 'transform .1s' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }} />
+              ))}
+            </div>
+          )}
+          <div style={{ height: 1, background: C.border }} />
+          <div onClick={() => { onDelete(); setShowMenu(false) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.danger, transition: 'background .1s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.dangerBg }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+            Delete list
+          </div>
+        </div>
       )}
     </div>
   )
@@ -1948,6 +2041,21 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                   <TaskList list={list}
                     onUpdate={u => updList(list.id, u)}
                     onDelete={() => delList(list.id)}
+                    onCopy={() => {
+                      const nl = { ...list, id: uid(), name: list.name + ' (copy)', tasks: list.tasks.map(t => ({ ...t, id: uid(), checklist: (t.checklist||[]).map(c => ({ ...c, id: uid() })) })) }
+                      setLists(p => { const i = p.findIndex(l => l.id === list.id); const n = [...p]; n.splice(i + 1, 0, nl); return n })
+                    }}
+                    onMoveLeft={() => setLists(p => { const i = p.findIndex(l => l.id === list.id); if (i <= 0) return p; const n = [...p]; [n[i-1], n[i]] = [n[i], n[i-1]]; return n })}
+                    onMoveRight={() => setLists(p => { const i = p.findIndex(l => l.id === list.id); if (i >= p.length - 1) return p; const n = [...p]; [n[i], n[i+1]] = [n[i+1], n[i]]; return n })}
+                    canMoveLeft={idx > 0}
+                    canMoveRight={idx < filteredLists.length - 1}
+                    boards={boards}
+                    currentBoardId={board.id}
+                    onMoveToBoard={targetBoardId => {
+                      onUpdate({ ...board, lists: board.lists.filter(l => l.id !== list.id) })
+                      const target = boards.find(b => b.id === targetBoardId)
+                      if (target) onUpdate({ ...target, lists: [...target.lists, { ...list, id: uid(), tasks: list.tasks.map(t => ({ ...t, id: uid() })) }] })
+                    }}
                     taskDrop={taskDrop}
                     onTaskDragOver={handleTaskDragOver}
                     onTaskDrop={handleTaskDrop}
