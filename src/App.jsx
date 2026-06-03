@@ -154,30 +154,25 @@ function templateBoard() {
 
 /* ─── Editable ───────────────────────────────────────────────────────────────── */
 function Editable({ value, onChange, style }) {
-  const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const ref = useRef(null)
-
   useEffect(() => { setDraft(value) }, [value])
-  useEffect(() => { if (editing && ref.current) ref.current.focus() }, [editing])
-
-  if (!editing) {
-    return <span className="renameable" style={{ ...style, cursor: 'text' }} onClick={() => setEditing(true)}>{value}</span>
-  }
   return (
     <input ref={ref} value={draft}
+      draggable={false}
       onChange={e => setDraft(e.target.value)}
-      onBlur={() => { onChange(draft); setEditing(false) }}
+      onBlur={() => onChange(draft)}
       onKeyDown={e => {
-        if (e.key === 'Enter') { onChange(draft); setEditing(false) }
-        if (e.key === 'Escape') { setDraft(value); setEditing(false) }
+        if (e.key === 'Enter')  { onChange(draft); ref.current?.blur() }
+        if (e.key === 'Escape') { setDraft(value);  ref.current?.blur() }
       }}
       style={{
         border: 'none', outline: 'none', background: 'transparent', width: '100%', padding: 0, margin: 0,
+        cursor: 'text',
         fontFamily: style?.fontFamily || FONT, fontSize: style?.fontSize || 'inherit',
         fontWeight: style?.fontWeight || 'inherit', color: style?.color || 'inherit',
         letterSpacing: style?.letterSpacing || 'inherit', lineHeight: style?.lineHeight || 'inherit',
-        caretColor: C.text,
+        caretColor: 'currentColor',
       }}
     />
   )
@@ -2031,6 +2026,24 @@ export default function App() {
     return localStorage.getItem('planner-active') || null
   })
   const [newBoardName, setNewBoardName] = useState('')
+
+  useEffect(() => {
+    const h = e => {
+      const tag = e.target.tagName
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA') return
+      let el = e.target.parentElement
+      while (el) {
+        if (el.draggable) {
+          el.draggable = false
+          document.addEventListener('mouseup', () => { el.draggable = true }, { once: true })
+          break
+        }
+        el = el.parentElement
+      }
+    }
+    document.addEventListener('mousedown', h, true)
+    return () => document.removeEventListener('mousedown', h, true)
+  }, [])
 
   useEffect(() => {
     try { localStorage.setItem('planner-boards', JSON.stringify(boards)) } catch { }
