@@ -593,10 +593,10 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
           {/* Main area */}
           <div style={{ flex: 1, padding: '16px 16px 24px', minWidth: 0 }}>
             {/* Action pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20, position: 'relative' }}>
               {[
-                { l: '+ Label', fn: addLabel },
-                { l: 'Checklist', fn: () => setTimeout(() => itemRef.current?.focus(), 50) },
+                { l: '+ Edit labels', fn: () => setLabelPickerOpen(p => !p) },
+                { l: '+ Checklist', fn: () => setTimeout(() => itemRef.current?.focus(), 50) },
               ].map(({ l, fn }) => (
                 <div key={l} onClick={fn} style={{ padding: '6px 12px', borderRadius: 6, background: C.overlayW10, fontSize: 12, fontWeight: 600, color: C.textWhite, cursor: 'pointer', transition: 'background .1s' }}
                   onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
@@ -604,21 +604,44 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
                   {l}
                 </div>
               ))}
+              {labelPickerOpen && (
+                <div style={{ position: 'absolute', top: '110%', left: 0, zIndex: 100 }}>
+                  <BoardLabelPicker
+                    boardLabels={boardLabels || []}
+                    cardLabels={task.labels}
+                    onToggle={label => {
+                      const on = task.labels.some(l => l.id === label.id)
+                      onUpdate({ ...task, labels: on ? task.labels.filter(l => l.id !== label.id) : [...task.labels, { ...label }] })
+                    }}
+                    onCreate={nl => {
+                      onCreateBoardLabel?.(nl)
+                      onUpdate({ ...task, labels: [...task.labels, { ...nl }] })
+                    }}
+                    onUpdate={(id, patch) => {
+                      onUpdateBoardLabel?.(id, patch)
+                      onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, ...patch } : l) })
+                    }}
+                    onDelete={id => {
+                      onDeleteBoardLabel?.(id)
+                      onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
+                    }}
+                    onClose={() => setLabelPickerOpen(false)}
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Labels */}
+            {/* Labels (applied) */}
             {task.labels.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, marginBottom: 8 }}>Labels</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
                   {task.labels.map(l => (
-                    <LabelPill key={l.id} label={l} onRename={v => updLabel(l.id, 'name', v)} onChangeColor={c => updLabel(l.id, 'color', c)} onRemove={() => rmLabel(l.id)} />
+                    <div key={l.id} style={{ height: 24, borderRadius: 6, background: l.color, padding: '0 10px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                      onClick={() => setLabelPickerOpen(true)}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(0,0,0,0.6)', letterSpacing: 0.5 }}>{l.name}</span>
+                    </div>
                   ))}
-                  <div onClick={addLabel} style={{ width: 28, height: 28, borderRadius: 6, background: C.overlayW10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
-                    onMouseLeave={e => { e.currentTarget.style.background = C.overlayW10 }}>
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 4v8M4 8h8" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" /></svg>
-                  </div>
                 </div>
               </div>
             )}
