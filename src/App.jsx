@@ -12,10 +12,10 @@ const C = {
   textMuted: '#8A8D93',
   textLight: '#C4C6CA',
   textWhite: '#FFFFFF',
-  accent: '#FF4F18',
-  accentLight: '#FF8A5C',
-  danger: '#D45858',
-  dangerBg: '#D4585833',
+  accent: '#f94144',
+  accentLight: '#f94144aa',
+  danger: '#f94144',
+  dangerBg: '#f9414433',
   border: '#222426',
   borderHover: '#3A3A3A',
   shadow: 'rgba(0,0,0,0.1)',
@@ -60,11 +60,11 @@ const GLOBAL_CSS = `
   .task-card:hover { border-color: rgba(255,255,255,0.25) !important; transform: translateY(-1px); }
   .task-card:hover .chk-tr { opacity: 1 !important; }
   .task-card[draggable]:active { opacity: 0.5; }
-  .task-card.is-focused { outline: 2px solid #FF4F18 !important; outline-offset: 2px; }
-  .task-card.is-selected { background: rgba(255,79,24,0.12) !important; border-color: rgba(255,79,24,0.45) !important; }
-  .task-card:focus-visible { outline: 2px solid #FF4F18; outline-offset: 2px; }
+  .task-card.is-focused { outline: 2px solid ${C.accent} !important; outline-offset: 2px; }
+  .task-card.is-selected { background: rgba(243,114,44,0.12) !important; border-color: rgba(243,114,44,0.45) !important; }
+  .task-card:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
   .icon-btn { background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
-  .icon-btn:focus-visible { outline: 2px solid #FF4F18; outline-offset: 2px; border-radius: 4px; }
+  .icon-btn:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; border-radius: 4px; }
   .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   .view-btn { border: none; background: transparent; padding: 10px 20px; font-size: 11px; font-weight: 800;
               cursor: pointer; border-radius: 12px; font-family: 'Archivo', sans-serif;
@@ -128,13 +128,22 @@ function newTask(text, dueDate = '') {
   return { id: uid(), text, done: false, note: '', dueDate, startTime: '', endTime: '', labels: [], checklist: [] }
 }
 
+const DEFAULT_BOARD_LABELS = () => [
+  { id: uid(), name: '', color: '#90be6d' },
+  { id: uid(), name: '', color: '#43aa8b' },
+  { id: uid(), name: '', color: '#f3722c' },
+  { id: uid(), name: '', color: '#f94144' },
+  { id: uid(), name: '', color: '#f9c74f' },
+  { id: uid(), name: '', color: '#277da1' },
+]
+
 function newBoard(name) {
-  return { id: uid(), name, color: PALETTE[0], lists: [], dayTags: {} }
+  return { id: uid(), name, color: PALETTE[0], lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS() }
 }
 
 function templateBoard() {
   return {
-    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {},
+    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(),
     lists: [
       { id: uid(), name: 'TO DO', color: PALETTE[0], collapsed: false, tasks: [] },
       { id: uid(), name: 'IN PROGRESS', color: PALETTE[1], collapsed: false, tasks: [] },
@@ -224,6 +233,144 @@ function LabelPill({ label, onRename, onChangeColor, onRemove }) {
         <span onClick={onRemove} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 9, marginLeft: 2 }}>×</span>
       </div>
       {showPicker && <ColorPicker colors={LABEL_COLORS} current={label.color} onPick={onChangeColor} onClose={() => setShowPicker(false)} />}
+    </div>
+  )
+}
+
+/* ─── BoardLabelPicker ───────────────────────────────────────────────────────── */
+function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreate, onUpdate, onDelete, onClose, style = {} }) {
+  const [search, setSearch] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editDraft, setEditDraft] = useState({ name: '', color: PALETTE[0] })
+  const [creating, setCreating] = useState(false)
+  const [newDraft, setNewDraft] = useState({ name: '', color: PALETTE[0] })
+  const ref = useRef(null)
+  const searchRef = useRef(null)
+
+  useEffect(() => { if (!editingId && !creating) searchRef.current?.focus() }, [editingId, creating])
+
+  const filtered = boardLabels.filter(l =>
+    !search.trim() || l.name.toLowerCase().includes(search.trim().toLowerCase())
+  )
+  const isOnCard = id => cardLabels.some(l => l.id === id)
+
+  const startEdit = (label, e) => {
+    e.stopPropagation()
+    setEditingId(label.id)
+    setEditDraft({ name: label.name, color: label.color })
+    setCreating(false)
+  }
+
+  const saveEdit = () => { onUpdate(editingId, editDraft); setEditingId(null) }
+
+  const handleCreate = () => {
+    const nl = { id: uid(), name: newDraft.name, color: newDraft.color }
+    onCreate(nl)
+    setCreating(false)
+    setNewDraft({ name: '', color: PALETTE[0] })
+  }
+
+  const iS = { width: '100%', border: 'none', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.overlayW10, color: C.textWhite, marginBottom: 8 }
+
+  const ColorGrid = ({ selected, onPick }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
+      {PALETTE.map(c => (
+        <div key={c} onClick={() => onPick(c)} style={{
+          height: 26, borderRadius: 5, background: c, cursor: 'pointer',
+          outline: selected === c ? `2px solid ${C.textWhite}` : '2px solid transparent',
+          outlineOffset: 1, transition: 'outline .1s',
+        }} />
+      ))}
+    </div>
+  )
+
+  const header = (title) => (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px 8px' }}>
+      {(editingId || creating) && (
+        <button onClick={() => { setEditingId(null); setCreating(false) }}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted, padding: '0 8px 0 0', fontSize: 18, lineHeight: 1 }}>‹</button>
+      )}
+      <span style={{ flex: 1, textAlign: 'center', fontSize: 12, fontWeight: 800, color: C.textWhite, letterSpacing: 0.3 }}>{title}</span>
+      <button onClick={onClose}
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+    </div>
+  )
+
+  const EditForm = ({ draft, setDraft, onSave, onDelete: onDel, saveLabel = 'Save' }) => (
+    <div style={{ padding: '0 12px 12px' }}>
+      <div style={{ height: 32, borderRadius: 7, background: draft.color, marginBottom: 10, display: 'flex', alignItems: 'center', padding: '0 10px' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.6)' }}>{draft.name || ' '}</span>
+      </div>
+      <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+        placeholder="Label name (optional)" style={iS} />
+      <div style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 6 }}>SELECT A COLOR</div>
+      <ColorGrid selected={draft.color} onPick={c => setDraft(d => ({ ...d, color: c }))} />
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onSave}
+          style={{ flex: 1, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 700, background: C.accent, color: C.textWhite, cursor: 'pointer', fontFamily: FONT }}>{saveLabel}</button>
+        {onDel && (
+          <button onClick={onDel}
+            style={{ border: 'none', borderRadius: 6, padding: '7px 12px', fontSize: 12, fontWeight: 700, background: C.dangerBg, color: C.danger, cursor: 'pointer', fontFamily: FONT }}>Delete</button>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div ref={ref} style={{ width: 250, background: '#2B2F34', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.7)', fontFamily: FONT, overflow: 'hidden', ...style }}>
+      {editingId ? (
+        <>
+          {header('Edit label')}
+          <EditForm draft={editDraft} setDraft={setEditDraft} onSave={saveEdit}
+            onDelete={() => { onDelete(editingId); setEditingId(null) }} />
+        </>
+      ) : creating ? (
+        <>
+          {header('Create label')}
+          <EditForm draft={newDraft} setDraft={setNewDraft} onSave={handleCreate} saveLabel="Create label" />
+        </>
+      ) : (
+        <>
+          {header('Labels')}
+          <div style={{ padding: '0 10px 6px' }}>
+            <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search labels…" style={{ ...iS, marginBottom: 0 }} />
+          </div>
+          <div style={{ maxHeight: 240, overflowY: 'auto', padding: '2px 0' }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: '10px 14px', fontSize: 12, color: C.textMuted, textAlign: 'center' }}>No labels found</div>
+            )}
+            {filtered.map(label => {
+              const on = isOnCard(label.id)
+              return (
+                <div key={label.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 10px', cursor: 'pointer' }}
+                  onClick={() => onToggle(label)}>
+                  <div style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0, border: `2px solid ${on ? label.color : C.textMuted}`, background: on ? label.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {on && <svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                  </div>
+                  <div style={{ flex: 1, height: 32, borderRadius: 6, background: label.color, display: 'flex', alignItems: 'center', padding: '0 10px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.65)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.name}</span>
+                  </div>
+                  <button onClick={e => startEdit(label, e)}
+                    style={{ width: 28, height: 28, borderRadius: 6, background: C.overlayW10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
+                    onMouseLeave={e => { e.currentTarget.style.background = C.overlayW10 }}>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ padding: '8px 10px', borderTop: `1px solid ${C.border}` }}>
+            <button onClick={() => setCreating(true)}
+              style={{ width: '100%', background: C.overlayW10, border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 700, color: C.textWhite, cursor: 'pointer', fontFamily: FONT, transition: 'background .1s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.overlayW10 }}>
+              + Create a new label
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -372,11 +519,12 @@ function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
 }
 
 /* ─── TaskPanel ──────────────────────────────────────────────────────────────── */
-function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor }) {
+function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
   const ref = useRef(null)
   const itemRef = useRef(null)
   const [newItem, setNewItem] = useState('')
   const [editingDesc, setEditingDesc] = useState(false)
+  const [labelPickerOpen, setLabelPickerOpen] = useState(false)
   const lc = listColor || C.accent
   const cl = task.checklist || []
   const clDone = cl.filter(c => c.done).length
@@ -562,22 +710,24 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor }) {
 
 /* ─── TaskCard ───────────────────────────────────────────────────────────────── */
 function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDelete, compact,
-                    isFocused, isSelected, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick }) {
-  const [burst, setBurst]         = useState(null)
+  isFocused, isSelected, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick,
+  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
+  const [burst, setBurst] = useState(null)
+  const [qView, setQView] = useState('main') // 'main' | 'labels'
   const [labelPopup, setLabelPopup] = useState(null)
   const [labelDraft, setLabelDraft] = useState('')
-  const [quickEdit, setQuickEdit]         = useState(false)
-  const [editDraft, setEditDraft]         = useState('')
-  const [isHovered, setIsHovered]         = useState(false)
+  const [quickEdit, setQuickEdit] = useState(false)
+  const [editDraft, setEditDraft] = useState('')
+  const [isHovered, setIsHovered] = useState(false)
   const [quickEditRect, setQuickEditRect] = useState(null)
   const [labelsCompact, setLabelsCompact] = useState(false)
-  const [textHovered, setTextHovered]     = useState(false)
-  const [chkHovered, setChkHovered]       = useState(false)
-  const chkRef        = useRef(null)
+  const [textHovered, setTextHovered] = useState(false)
+  const [chkHovered, setChkHovered] = useState(false)
+  const chkRef = useRef(null)
   const labelPopupRef = useRef(null)
-  const editRef       = useRef(null)
-  const cardRef       = useRef(null)
-  const quickMenuRef  = useRef(null)
+  const editRef = useRef(null)
+  const cardRef = useRef(null)
+  const quickMenuRef = useRef(null)
   const lc = listColor || C.accent
   const cl = task.checklist || []
   const clDone = cl.filter(c => c.done).length
@@ -588,7 +738,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
     setQuickEditRect(r ? { top: r.top, right: r.right, left: r.left, bottom: r.bottom } : null)
     setQuickEdit(true)
   }
-  const closeQuickEdit = () => { setQuickEdit(false); setQuickEditRect(null) }
+  const closeQuickEdit = () => { setQuickEdit(false); setQuickEditRect(null); setQView('main') }
   const saveEdit = () => { if (editDraft.trim()) onUpdate({ ...task, text: editDraft.trim() }); closeQuickEdit() }
 
   useEffect(() => { if (quickEdit && editRef.current) editRef.current.focus() }, [quickEdit])
@@ -606,7 +756,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   useEffect(() => {
     if (!isHovered || quickEdit) return
     const h = e => {
-      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       if (e.key === 'e' || e.key === 'E') { e.preventDefault(); openQuickEdit() }
     }
     window.addEventListener('keydown', h)
@@ -686,15 +836,15 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         )}
         {/* Label pills */}
         {task.labels.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, alignItems: 'center' }} onClick={e => { e.stopPropagation(); setLabelsCompact(c => !c) }}>
-          {task.labels.map(l => (
-            labelsCompact
-              ? <div key={l.id} style={{ height: 8, width: 36, borderRadius: 3, background: l.color, cursor: 'pointer' }} />
-              : <div key={l.id} className="renameable" style={{ display: 'inline-flex', alignItems: 'center', background: l.color, borderRadius: 6, padding: '5px 9px', fontSize: 10, fontWeight: 800, color: C.textWhite, letterSpacing: 0.6, fontFamily: FONT, cursor: 'pointer', userSelect: 'none' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10, alignItems: 'center' }} onClick={e => { e.stopPropagation(); setLabelsCompact(c => !c) }}>
+            {task.labels.map(l => (
+              labelsCompact
+                ? <div key={l.id} style={{ height: 8, width: 36, borderRadius: 3, background: l.color, cursor: 'pointer' }} />
+                : <div key={l.id} className="renameable" style={{ display: 'inline-flex', alignItems: 'center', background: l.color, borderRadius: 6, padding: '5px 9px', fontSize: 10, fontWeight: 800, color: C.textWhite, letterSpacing: 0.6, fontFamily: FONT, cursor: 'pointer', userSelect: 'none' }}>
                   {l.name}
                 </div>
-          ))}
-        </div>
+            ))}
+          </div>
         )}
 
         {/* Task text row */}
@@ -763,10 +913,11 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
 
       <Confetti burst={burst} onDone={() => setBurst(null)} />
       {quickEdit && quickEditRect && (() => {
-        const menuW = 210
+        const isLabels = qView === 'labels'
+        const menuW = isLabels ? 250 : 210
         const spaceRight = window.innerWidth - quickEditRect.right - 8
         const left = spaceRight >= menuW ? quickEditRect.right + 8 : quickEditRect.left - menuW - 8
-        const top  = Math.min(quickEditRect.top, window.innerHeight - 280)
+        const top = Math.min(quickEditRect.top, window.innerHeight - (isLabels ? 420 : 280))
         const QItem = ({ icon, label, color, onClick }) => (
           <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
             onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
@@ -775,21 +926,49 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
           </div>
         )
         return (
-          <div ref={quickMenuRef} onClick={e => e.stopPropagation()} style={{ position: 'fixed', top, left, zIndex: 10001, width: menuW, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.65)', overflow: 'hidden', fontFamily: FONT }}>
-            <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${C.border}` }}>
-              <button onClick={saveEdit} style={{ width: '100%', background: lc, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 800, color: '#fff', cursor: 'pointer', fontFamily: FONT, letterSpacing: 0.3 }}>Save</button>
-            </div>
-            <div style={{ padding: '4px 0' }}>
-              <QItem label="Open card" onClick={() => { closeQuickEdit(); saveEdit(); setPanelOpen(true) }}
-                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke={C.textMuted} strokeWidth="1.3"/><line x1="5" y1="8" x2="11" y2="8" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/><line x1="8" y1="5" x2="8" y2="11" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
-              <QItem label="Edit labels" onClick={() => { closeQuickEdit(); addLabel({ stopPropagation: () => {} }) }}
-                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L7.5 3l5 5-5.5 5.5a1 1 0 01-.7.3H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7z" stroke={C.textMuted} strokeWidth="1.3"/><circle cx="5.5" cy="10.5" r="1" fill={C.textMuted}/></svg>} />
-              <QItem label="Edit due date" onClick={() => { closeQuickEdit(); setPanelOpen(true) }}
-                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textMuted} strokeWidth="1.3"/><line x1="2" y1="7" x2="14" y2="7" stroke={C.textMuted} strokeWidth="1.3"/><line x1="6" y1="1" x2="6" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/><line x1="10" y1="1" x2="10" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
-              <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
-              <QItem label="Delete card" color={C.danger} onClick={() => { closeQuickEdit(); onDelete() }}
-                icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M5 7v5M8 7v5M11 7v5" stroke={C.danger} strokeWidth="1.3" strokeLinecap="round"/></svg>} />
-            </div>
+          <div ref={quickMenuRef} onClick={e => e.stopPropagation()}
+            style={{ position: 'fixed', top, left, zIndex: 10001, width: menuW, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.65)', overflow: 'hidden', fontFamily: FONT }}>
+            {isLabels ? (
+              <BoardLabelPicker
+                boardLabels={boardLabels || []}
+                cardLabels={task.labels}
+                onToggle={label => {
+                  const on = task.labels.some(l => l.id === label.id)
+                  onUpdate({ ...task, labels: on ? task.labels.filter(l => l.id !== label.id) : [...task.labels, { ...label }] })
+                }}
+                onCreate={nl => {
+                  onCreateBoardLabel?.(nl)
+                  onUpdate({ ...task, labels: [...task.labels, { ...nl }] })
+                }}
+                onUpdate={(id, patch) => {
+                  onUpdateBoardLabel?.(id, patch)
+                  onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, ...patch } : l) })
+                }}
+                onDelete={id => {
+                  onDeleteBoardLabel?.(id)
+                  onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
+                }}
+                onClose={() => setQView('main')}
+                style={{ boxShadow: 'none', borderRadius: 0 }}
+              />
+            ) : (
+              <>
+                <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${C.border}` }}>
+                  <button onClick={saveEdit} style={{ width: '100%', background: lc, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 800, color: '#fff', cursor: 'pointer', fontFamily: FONT, letterSpacing: 0.3 }}>Save</button>
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <QItem label="Open card" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }}
+                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke={C.textMuted} strokeWidth="1.3" /><line x1="5" y1="8" x2="11" y2="8" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="8" y1="5" x2="8" y2="11" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
+                  <QItem label="Edit labels" onClick={() => setQView('labels')}
+                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8.5L7.5 3l5 5-5.5 5.5a1 1 0 01-.7.3H4a1 1 0 01-1-1v-2.6a1 1 0 01.3-.7z" stroke={C.textMuted} strokeWidth="1.3" /><circle cx="5.5" cy="10.5" r="1" fill={C.textMuted} /></svg>} />
+                  <QItem label="Edit due date" onClick={() => { saveEdit(); closeQuickEdit(); onOpenPanel?.(task.id) }}
+                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textMuted} strokeWidth="1.3" /><line x1="2" y1="7" x2="14" y2="7" stroke={C.textMuted} strokeWidth="1.3" /><line x1="6" y1="1" x2="6" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="10" y1="1" x2="10" y2="5" stroke={C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
+                  <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
+                  <QItem label="Delete card" color={C.danger} onClick={() => { closeQuickEdit(); onDelete() }}
+                    icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3a1 1 0 011-1h2a1 1 0 011 1v1M5 7v5M8 7v5M11 7v5" stroke={C.danger} strokeWidth="1.3" strokeLinecap="round" /></svg>} />
+                </div>
+              </>
+            )}
           </div>
         )
       })()}
@@ -799,7 +978,8 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
 
 /* ─── TaskList ───────────────────────────────────────────────────────────────── */
 function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
-                    focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone }) {
+  focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone,
+  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
   const [showCP, setShowCP] = useState(false)
   const [taskText, setTaskText] = useState('')
   const [adding, setAdding] = useState(false)
@@ -900,7 +1080,11 @@ function TaskList({ list, onUpdate, onDelete, taskDrop, onTaskDragOver, onTaskDr
                   onActionDone={onActionDone}
                   onOpenPanel={onOpenPanel}
                   onFocusCard={onFocusCard}
-                  onShiftClick={onShiftClick} />
+                  onShiftClick={onShiftClick}
+                  boardLabels={boardLabels}
+                  onCreateBoardLabel={onCreateBoardLabel}
+                  onUpdateBoardLabel={onUpdateBoardLabel}
+                  onDeleteBoardLabel={onDeleteBoardLabel} />
               </li>
             </Fragment>
           ))}
@@ -1343,12 +1527,12 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const newInputRef = useRef(null)
 
   // ── Keyboard / selection state ──
-  const [focusedCard, setFocusedCard]         = useState(null)   // { listId, taskId }
-  const [selectedCards, setSelectedCards]     = useState(new Set()) // Set<taskId>
-  const [selListMap, setSelListMap]           = useState(new Map()) // Map<taskId,listId>
-  const [clipboard, setClipboard]             = useState(null)   // { task, sourceListId, mode }
-  const [openPanel, setOpenPanel]             = useState(null)   // { listId, taskId }
-  const [focusedAction, setFocusedAction]     = useState(null)
+  const [focusedCard, setFocusedCard] = useState(null)   // { listId, taskId }
+  const [selectedCards, setSelectedCards] = useState(new Set()) // Set<taskId>
+  const [selListMap, setSelListMap] = useState(new Map()) // Map<taskId,listId>
+  const [clipboard, setClipboard] = useState(null)   // { task, sourceListId, mode }
+  const [openPanel, setOpenPanel] = useState(null)   // { listId, taskId }
+  const [focusedAction, setFocusedAction] = useState(null)
   const [requestAddInList, setRequestAddInList] = useState(null)
   const undoStack = useRef([])
   const redoStack = useRef([])
@@ -1443,13 +1627,27 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
 
   const handleCreate = () => { if (!newName.trim()) return; onCreateBoard(newName.trim()); setNewName('') }
 
+  // ── Board labels ──
+  const boardLabels = board.boardLabels || []
+  const createBoardLabel = nl => boardUpdate({ ...board, boardLabels: [...boardLabels, nl] })
+  const updateBoardLabel = (id, patch) => boardUpdate({
+    ...board,
+    boardLabels: boardLabels.map(l => l.id === id ? { ...l, ...patch } : l),
+    lists: lists.map(list => ({ ...list, tasks: list.tasks.map(t => ({ ...t, labels: t.labels.map(l => l.id === id ? { ...l, ...patch } : l) })) })),
+  })
+  const deleteBoardLabel = id => boardUpdate({
+    ...board,
+    boardLabels: boardLabels.filter(l => l.id !== id),
+    lists: lists.map(list => ({ ...list, tasks: list.tasks.map(t => ({ ...t, labels: t.labels.filter(l => l.id !== id) })) })),
+  })
+
   // ── Derived panel task (always fresh from lists) ──
   const openPanelList = openPanel ? lists.find(l => l.id === openPanel.listId) : null
   const openPanelTask = openPanel ? openPanelList?.tasks.find(t => t.id === openPanel.taskId) : null
 
   // ── Panel / card helpers ──
-  const handleOpenPanel  = taskId => { for (const l of lists) { const t = l.tasks.find(t => t.id === taskId); if (t) { setOpenPanel({ listId: l.id, taskId }); return } } }
-  const handleFocusCard  = (listId, taskId) => setFocusedCard({ listId, taskId })
+  const handleOpenPanel = taskId => { for (const l of lists) { const t = l.tasks.find(t => t.id === taskId); if (t) { setOpenPanel({ listId: l.id, taskId }); return } } }
+  const handleFocusCard = (listId, taskId) => setFocusedCard({ listId, taskId })
   const handleShiftClick = (listId, taskId) => {
     setSelectedCards(prev => { const n = new Set(prev); n.has(taskId) ? n.delete(taskId) : n.add(taskId); return n })
     setSelListMap(prev => { const n = new Map(prev); n.has(taskId) ? n.delete(taskId) : n.set(taskId, listId); return n })
@@ -1459,13 +1657,13 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   useEffect(() => {
     const h = e => {
       const tag = e.target.tagName
-      const typing = ['INPUT','TEXTAREA','SELECT'].includes(tag) || e.target.isContentEditable
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || e.target.isContentEditable
 
       // Esc — always
       if (e.key === 'Escape') {
-        if (openPanel)        { setOpenPanel(null); return }
+        if (openPanel) { setOpenPanel(null); return }
         if (selectedCards.size) { setSelectedCards(new Set()); setSelListMap(new Map()); return }
-        if (focusedCard)      { setFocusedCard(null); return }
+        if (focusedCard) { setFocusedCard(null); return }
         return
       }
 
@@ -1493,7 +1691,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         if (!l) return
         const idx = l.tasks.findIndex(t => t.id === openPanel.taskId)
         if ((e.key === 'j' || e.key === 'ArrowRight') && idx < l.tasks.length - 1) { e.preventDefault(); setOpenPanel({ listId: l.id, taskId: l.tasks[idx + 1].id }) }
-        if ((e.key === 'k' || e.key === 'ArrowLeft')  && idx > 0)                  { e.preventDefault(); setOpenPanel({ listId: l.id, taskId: l.tasks[idx - 1].id }) }
+        if ((e.key === 'k' || e.key === 'ArrowLeft') && idx > 0) { e.preventDefault(); setOpenPanel({ listId: l.id, taskId: l.tasks[idx - 1].id }) }
         return
       }
 
@@ -1511,16 +1709,16 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         const cl = filteredLists[li]
         if (!cl) return
         const ti = cl.tasks.findIndex(t => t.id === focusedCard.taskId)
-        if (dir === 'down'  && ti < cl.tasks.length - 1) setFocusedCard({ listId: cl.id, taskId: cl.tasks[ti + 1].id })
-        if (dir === 'up'    && ti > 0)                   setFocusedCard({ listId: cl.id, taskId: cl.tasks[ti - 1].id })
-        if (dir === 'left'  && li > 0) { const pl = filteredLists[li - 1]; const ni = Math.min(ti, pl.tasks.length - 1); if (ni >= 0) setFocusedCard({ listId: pl.id, taskId: pl.tasks[ni].id }) }
+        if (dir === 'down' && ti < cl.tasks.length - 1) setFocusedCard({ listId: cl.id, taskId: cl.tasks[ti + 1].id })
+        if (dir === 'up' && ti > 0) setFocusedCard({ listId: cl.id, taskId: cl.tasks[ti - 1].id })
+        if (dir === 'left' && li > 0) { const pl = filteredLists[li - 1]; const ni = Math.min(ti, pl.tasks.length - 1); if (ni >= 0) setFocusedCard({ listId: pl.id, taskId: pl.tasks[ni].id }) }
         if (dir === 'right' && li < filteredLists.length - 1) { const nl = filteredLists[li + 1]; const ni = Math.min(ti, nl.tasks.length - 1); if (ni >= 0) setFocusedCard({ listId: nl.id, taskId: nl.tasks[ni].id }) }
       }
 
-      if (e.key === 'ArrowDown'  || e.key === 'j') { e.preventDefault(); moveFocus('down');  return }
-      if (e.key === 'ArrowUp'    || e.key === 'k') { e.preventDefault(); moveFocus('up');    return }
-      if (e.key === 'ArrowLeft')                   { e.preventDefault(); moveFocus('left');  return }
-      if (e.key === 'ArrowRight')                  { e.preventDefault(); moveFocus('right'); return }
+      if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); moveFocus('down'); return }
+      if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); moveFocus('up'); return }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); moveFocus('left'); return }
+      if (e.key === 'ArrowRight') { e.preventDefault(); moveFocus('right'); return }
 
       if (!focusedCard) return
 
@@ -1555,10 +1753,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         })
         setFocusedCard({ listId: tgt.id, taskId: focusedCard.taskId })
       }
-      if (e.key === ',')  { moveToList('left',  'bottom'); return }
-      if (e.key === '.')  { moveToList('right', 'bottom'); return }
-      if (e.key === '<')  { moveToList('left',  'top');    return }
-      if (e.key === '>')  { moveToList('right', 'top');    return }
+      if (e.key === ',') { moveToList('left', 'bottom'); return }
+      if (e.key === '.') { moveToList('right', 'bottom'); return }
+      if (e.key === '<') { moveToList('left', 'top'); return }
+      if (e.key === '>') { moveToList('right', 'top'); return }
 
       // Ctrl/Cmd + C/X/V
       if (e.ctrlKey || e.metaKey) {
@@ -1566,11 +1764,13 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
           for (const l of lists) { const t = l.tasks.find(t => t.id === focusedCard.taskId); if (t) { setClipboard({ task: t, sourceListId: l.id, mode: 'copy' }); return } }
         }
         if (e.key === 'x') {
-          for (const l of lists) { const t = l.tasks.find(t => t.id === focusedCard.taskId); if (t) {
-            setClipboard({ task: t, sourceListId: l.id, mode: 'cut' })
-            setLists(p => p.map(ll => ll.id === l.id ? { ...ll, tasks: ll.tasks.filter(tt => tt.id !== t.id) } : ll))
-            setFocusedCard(null); return
-          }}
+          for (const l of lists) {
+            const t = l.tasks.find(t => t.id === focusedCard.taskId); if (t) {
+              setClipboard({ task: t, sourceListId: l.id, mode: 'cut' })
+              setLists(p => p.map(ll => ll.id === l.id ? { ...ll, tasks: ll.tasks.filter(tt => tt.id !== t.id) } : ll))
+              setFocusedCard(null); return
+            }
+          }
         }
         if (e.key === 'v' && clipboard) {
           const newT = { ...clipboard.task, id: uid() }
@@ -1604,8 +1804,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       <nav aria-label="Application navigation" style={{ width: 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
 
         {/* Branding */}
-        <div style={{ padding: '24px 16px 20px' }}>
-          <strong style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT }}>PLAN</strong>
+        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
+          <strong style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT }}>PLANNA</strong>
         </div>
 
         <div style={{ height: 1, background: C.border, margin: '0 16px 12px' }} aria-hidden="true" />
@@ -1667,7 +1867,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       <main style={{ flex: 1, overflow: view === 'agenda' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* ── Top bar ── */}
-        <header style={{ padding: '28px 36px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, borderBottom: `1px solid ${C.border}` }}>
+        <header style={{ minHeight: 72, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 10, height: 10, borderRadius: 3, background: board.color }} />
             {editingTitle ? (
@@ -1746,7 +1946,11 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                     onFocusCard={handleFocusCard}
                     onShiftClick={handleShiftClick}
                     requestAdd={requestAddInList}
-                    onAddDone={() => setRequestAddInList(null)} />
+                    onAddDone={() => setRequestAddInList(null)}
+                    boardLabels={boardLabels}
+                    onCreateBoardLabel={createBoardLabel}
+                    onUpdateBoardLabel={updateBoardLabel}
+                    onDeleteBoardLabel={deleteBoardLabel} />
                 </Fragment>
               ))}
               {dropIndex === filteredLists.length && dragListId && (
@@ -1785,6 +1989,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
           onUpdate={u => setLists(p => p.map(l => l.id === openPanel.listId ? { ...l, tasks: l.tasks.map(t => t.id === u.id ? u : t) } : l))}
           onDelete={() => { setLists(p => p.map(l => l.id === openPanel.listId ? { ...l, tasks: l.tasks.filter(t => t.id !== openPanel.taskId) } : l)); setOpenPanel(null) }}
           onClose={() => setOpenPanel(null)}
+          boardLabels={boardLabels}
+          onCreateBoardLabel={createBoardLabel}
+          onUpdateBoardLabel={updateBoardLabel}
+          onDeleteBoardLabel={deleteBoardLabel}
         />
       )}
     </div>
@@ -1835,7 +2043,7 @@ export default function App() {
         <style>{GLOBAL_CSS}</style>
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', maxWidth: 360, padding: 20 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLAN</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLANNA</div>
             <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 32 }}>Create your first board to get started</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
               <input autoFocus value={newBoardName} onChange={e => setNewBoardName(e.target.value)}

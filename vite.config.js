@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'PLAN',
-        short_name: 'PLAN',
+        name: 'PLANNA',
+        short_name: 'PLANNA',
         description: 'A minimal Trello-style task board',
         theme_color: '#000000',
         background_color: '#000000',
