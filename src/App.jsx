@@ -40,10 +40,6 @@ const PALETTE = [
   '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
 ]
 
-const LABEL_COLORS = [
-  '#f94144', '#f3722c', '#f8961e', '#f9844a', '#f9c74f',
-  '#90be6d', '#43aa8b', '#4d908e', '#577590', '#277da1',
-]
 
 /* ─── Global CSS ─────────────────────────────────────────────────────────────── */
 const GLOBAL_CSS = `
@@ -75,6 +71,12 @@ const GLOBAL_CSS = `
   .check-bounce { animation: check-bounce-anim .5s cubic-bezier(.3,.7,.4,1) 1.3s; transform-origin: center; }
   @media (max-width: 640px) { .top-bar h1 { font-size: 20px !important; } .board-grid { grid-template-columns: 1fr !important; } }
   @media (hover: none) { .chk-tr { opacity: 1 !important; } }
+  .task-chk { opacity: 0; transition: opacity .15s, border-color .15s, background .15s; }
+  .task-card:hover .task-chk { opacity: 1; }
+  .task-chk.chk-done { opacity: 1; }
+  .task-chk:not(.chk-done):hover { border-color: rgba(255,255,255,0.6) !important; background: rgba(255,255,255,0.10) !important; }
+  .task-chk:hover ~ .task-text { transform: translateX(4px); }
+  .task-text { transition: transform .15s; }
 `
 
 /* ─── Utilities ──────────────────────────────────────────────────────────────── */
@@ -152,6 +154,17 @@ function templateBoard() {
   }
 }
 
+/* ─── Hooks ──────────────────────────────────────────────────────────────────── */
+function useClickOutside(ref, onClose) {
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) onCloseRef.current() }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+}
+
 /* ─── Editable ───────────────────────────────────────────────────────────────── */
 function Editable({ value, onChange, style }) {
   const [draft, setDraft] = useState(value)
@@ -190,11 +203,7 @@ function ColorPicker({ colors, current, onPick, onClose }) {
     }
   }, [])
 
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
+  useClickOutside(ref, onClose)
 
   return (
     <div ref={ref} style={{
@@ -227,12 +236,26 @@ function LabelPill({ label, onRename, onChangeColor, onRemove }) {
         <Editable value={label.name} onChange={onRename} style={{ fontSize: 10, fontWeight: 800, color: C.textWhite, fontFamily: FONT }} />
         <span onClick={onRemove} style={{ cursor: 'pointer', opacity: 0.6, fontSize: 9, marginLeft: 2 }}>×</span>
       </div>
-      {showPicker && <ColorPicker colors={LABEL_COLORS} current={label.color} onPick={onChangeColor} onClose={() => setShowPicker(false)} />}
+      {showPicker && <ColorPicker colors={PALETTE} current={label.color} onPick={onChangeColor} onClose={() => setShowPicker(false)} />}
     </div>
   )
 }
 
 /* ─── BoardLabelPicker ───────────────────────────────────────────────────────── */
+function ColorGrid({ selected, onPick }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
+      {PALETTE.map(c => (
+        <div key={c} onClick={() => onPick(c)} style={{
+          height: 26, borderRadius: 5, background: c, cursor: 'pointer',
+          outline: selected === c ? `2px solid ${C.textWhite}` : '2px solid transparent',
+          outlineOffset: 1, transition: 'outline .1s',
+        }} />
+      ))}
+    </div>
+  )
+}
+
 function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreate, onUpdate, onDelete, onClose, style = {} }) {
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -266,18 +289,6 @@ function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreat
   }
 
   const iS = { width: '100%', border: 'none', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.overlayW10, color: C.textWhite, marginBottom: 8 }
-
-  const ColorGrid = ({ selected, onPick }) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginBottom: 10 }}>
-      {PALETTE.map(c => (
-        <div key={c} onClick={() => onPick(c)} style={{
-          height: 26, borderRadius: 5, background: c, cursor: 'pointer',
-          outline: selected === c ? `2px solid ${C.textWhite}` : '2px solid transparent',
-          outlineOffset: 1, transition: 'outline .1s',
-        }} />
-      ))}
-    </div>
-  )
 
   const header = (title) => (
     <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px 8px' }}>
@@ -514,6 +525,16 @@ function ChecklistItem({ item, lc, onToggle, onRename, onDelete, onSetDue }) {
 }
 
 /* ─── TaskPanel ──────────────────────────────────────────────────────────────── */
+function SideBtn({ label, icon, onClick }) {
+  return (
+    <div onClick={onClick} style={{ padding: '7px 12px', borderRadius: 6, cursor: 'pointer', background: C.overlayW10, fontSize: 12, fontWeight: 600, color: C.textWhite, display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, transition: 'background .1s' }}
+      onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
+      onMouseLeave={e => { e.currentTarget.style.background = C.overlayW10 }}>
+      {icon}{label}
+    </div>
+  )
+}
+
 function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
   const ref = useRef(null)
   const itemRef = useRef(null)
@@ -524,27 +545,15 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
   const cl = task.checklist || []
   const clDone = cl.filter(c => c.done).length
 
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
+  useClickOutside(ref, onClose)
 
   const addItem = () => { if (!newItem.trim()) return; onUpdate({ ...task, checklist: [...cl, { id: uid(), text: newItem.trim(), done: false, dueDate: '' }] }); setNewItem('') }
   const togItem = id => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, done: !c.done } : c) })
   const delItem = id => onUpdate({ ...task, checklist: cl.filter(c => c.id !== id) })
   const renItem = (id, t) => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, text: t } : c) })
-  const addLabel = () => onUpdate({ ...task, labels: [...task.labels, { id: uid(), name: 'LABEL', color: LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)] }] })
+  const addLabel = () => onUpdate({ ...task, labels: [...task.labels, { id: uid(), name: 'LABEL', color: PALETTE[Math.floor(Math.random() * PALETTE.length)] }] })
   const updLabel = (id, k, v) => onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, [k]: v } : l) })
   const rmLabel = id => onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
-
-  const SideBtn = ({ label, icon, onClick }) => (
-    <div onClick={onClick} style={{ padding: '7px 12px', borderRadius: 6, cursor: 'pointer', background: C.overlayW10, fontSize: 12, fontWeight: 600, color: C.textWhite, display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4, transition: 'background .1s' }}
-      onMouseEnter={e => { e.currentTarget.style.background = C.overlayW20 }}
-      onMouseLeave={e => { e.currentTarget.style.background = C.overlayW10 }}>
-      {icon}{label}
-    </div>
-  )
 
   const closeRef = useRef(null)
   useEffect(() => { closeRef.current?.focus() }, [])
@@ -727,6 +736,16 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
 }
 
 /* ─── TaskCard ───────────────────────────────────────────────────────────────── */
+function QItem({ label, color, onClick }) {
+  return (
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
+      onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+      <span>{label}</span>
+    </div>
+  )
+}
+
 function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDelete, compact,
   isFocused, isSelected, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick,
   boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
@@ -739,8 +758,6 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   const [isHovered, setIsHovered] = useState(false)
   const [quickEditRect, setQuickEditRect] = useState(null)
   const [labelsCompact, setLabelsCompact] = useState(false)
-  const [textHovered, setTextHovered] = useState(false)
-  const [chkHovered, setChkHovered] = useState(false)
   const chkRef = useRef(null)
   const labelPopupRef = useRef(null)
   const editRef = useRef(null)
@@ -801,7 +818,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   }
   const addLabel = e => {
     e.stopPropagation()
-    const nl = { id: uid(), name: 'LABEL', color: LABEL_COLORS[0] }
+    const nl = { id: uid(), name: 'LABEL', color: PALETTE[0] }
     onUpdate({ ...task, labels: [...task.labels, nl] })
     setLabelDraft('LABEL')
     setLabelPopup(nl.id)
@@ -874,21 +891,17 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, marginBottom: 12 }}>
-            <div ref={chkRef} onClick={handleToggle} style={{
-              width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, marginTop: 2,
-              border: task.done ? 'none' : `2px solid ${chkHovered ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.22)'}`,
-              background: task.done ? lc : chkHovered ? C.overlayW10 : 'transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: (task.done || textHovered || chkHovered) ? 1 : 0,
-              transition: 'opacity .15s, border-color .15s, background .15s',
-            }}
-              onMouseEnter={() => setChkHovered(true)}
-              onMouseLeave={() => setChkHovered(false)}>
+            <div ref={chkRef} onClick={handleToggle}
+              className={`task-chk${task.done ? ' chk-done' : ''}`}
+              style={{
+                width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, marginTop: 2,
+                border: task.done ? 'none' : '2px solid rgba(255,255,255,0.22)',
+                background: task.done ? lc : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
               {task.done && <svg width="9" height="9" viewBox="0 0 12 12" className={burst ? 'check-bounce' : ''}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </div>
-            <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: task.done ? C.textMuted : C.textWhite, lineHeight: 1.5, textDecoration: task.done ? 'line-through' : 'none', transform: chkHovered ? 'translateX(4px)' : 'translateX(0)', transition: 'transform .15s' }}
-              onMouseEnter={() => setTextHovered(true)}
-              onMouseLeave={() => setTextHovered(false)}>
+            <div className="task-text" style={{ flex: 1, fontSize: 14, fontWeight: 600, color: task.done ? C.textMuted : C.textWhite, lineHeight: 1.5, textDecoration: task.done ? 'line-through' : 'none' }}>
               {task.text}
             </div>
             <div onClick={e => { e.stopPropagation(); openQuickEdit() }} className="chk-tr" style={{
@@ -936,13 +949,6 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         const spaceRight = window.innerWidth - quickEditRect.right - 8
         const left = spaceRight >= menuW ? quickEditRect.right + 8 : quickEditRect.left - menuW - 8
         const top = Math.min(quickEditRect.top, window.innerHeight - (isLabels ? 420 : 280))
-        const QItem = ({ label, color, onClick }) => (
-          <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: color || C.textWhite, fontFamily: FONT, transition: 'background .1s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = C.overlayW10 }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-            <span>{label}</span>
-          </div>
-        )
         return (
           <div ref={quickMenuRef} onClick={e => e.stopPropagation()}
             style={{ position: 'fixed', top, left, zIndex: 10001, width: menuW, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.65)', overflow: 'hidden', fontFamily: FONT }}>
@@ -991,6 +997,10 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
 }
 
 /* ─── TaskList ───────────────────────────────────────────────────────────────── */
+function DropLine() {
+  return <div style={{ height: 3, background: C.card, borderRadius: 2, margin: '2px 8px', opacity: 0.6 }} />
+}
+
 function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, boards, currentBoardId, onMoveToBoard,
   taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
   focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone,
@@ -1059,7 +1069,6 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
   }
 
   const showInd = taskDrop && taskDrop.listId === list.id
-  const DropLine = () => <div style={{ height: 3, background: C.card, borderRadius: 2, margin: '2px 8px', opacity: 0.6 }} />
 
   return (
     <div
@@ -1231,11 +1240,7 @@ function MiniCalendar({ onPickDate, onClose }) {
   const [viewDate, setViewDate] = useState(new Date())
   const ref = useRef(null)
 
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [onClose])
+  useClickOutside(ref, onClose)
 
   const year = viewDate.getFullYear()
   const month = viewDate.getMonth()
@@ -1298,7 +1303,7 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
     setTaskText('')
   }
 
-  const addTag = () => onUpdateTags([...tags, { id: uid(), name: 'TAG', color: LABEL_COLORS[Math.floor(Math.random() * LABEL_COLORS.length)] }])
+  const addTag = () => onUpdateTags([...tags, { id: uid(), name: 'TAG', color: PALETTE[Math.floor(Math.random() * PALETTE.length)] }])
   const updTag = (id, k, v) => onUpdateTags(tags.map(t => t.id === id ? { ...t, [k]: v } : t))
   const removeTag = id => onUpdateTags(tags.filter(t => t.id !== id))
 
@@ -1418,6 +1423,18 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
 }
 
 /* ─── AgendaView ─────────────────────────────────────────────────────────────── */
+function ArrowBtn({ dir, onClick }) {
+  return (
+    <div onClick={onClick} style={{ width: 40, height: 40, borderRadius: R, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.border }}
+      onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
+      onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d={dir === 'l' ? 'M10 4l-4 4 4 4' : 'M6 4l4 4-4 4'} stroke={C.textWhite} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  )
+}
+
 function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [calOpen, setCalOpen] = useState(false)
@@ -1462,16 +1479,6 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
   const delTask = (lid, tid) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: l.tasks.filter(t => t.id !== tid) } : l))
   const addTask = (lid, text, dueDate) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: [...l.tasks, newTask(text, dueDate)] } : l))
 
-  const ArrowBtn = ({ dir, onClick }) => (
-    <div onClick={onClick} style={{ width: 40, height: 40, borderRadius: R, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.border }}
-      onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
-      onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <path d={dir === 'l' ? 'M10 4l-4 4 4 4' : 'M6 4l4 4-4 4'} stroke={C.textWhite} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
-  )
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Week navigation */}
@@ -1504,24 +1511,8 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
 }
 
 /* ─── DayView ────────────────────────────────────────────────────────────────── */
-function DayView({ lists, onToggleTask, onToggleChecklist }) {
-  const now = new Date()
-  const today = todayStr()
-
-  const dayLabel = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
-  const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
-
-  const allTasks = lists
-    .flatMap(l => l.tasks.map(t => ({ ...t, _listColor: l.color, _listName: l.name, _listId: l.id })))
-    .filter(t => t.dueDate === today || !t.dueDate)
-    .sort((a, b) => {
-      if (!a.startTime && !b.startTime) return 0
-      if (!a.startTime) return 1
-      if (!b.startTime) return -1
-      return a.startTime.localeCompare(b.startTime)
-    })
-
-  const Chk = ({ done, size, color, onToggle }) => (
+function Chk({ done, size, color, onToggle }) {
+  return (
     <div onClick={e => { e.stopPropagation(); onToggle() }} style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
       border: `2px solid ${done ? color : C.textMuted}`,
@@ -1534,6 +1525,27 @@ function DayView({ lists, onToggleTask, onToggleChecklist }) {
         </svg>
       )}
     </div>
+  )
+}
+
+function DayView({ lists, onToggleTask, onToggleChecklist }) {
+  const now = new Date()
+  const today = todayStr()
+
+  const dayLabel = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
+  const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
+
+  const allTasks = useMemo(() =>
+    lists
+      .flatMap(l => l.tasks.map(t => ({ ...t, _listColor: l.color, _listName: l.name, _listId: l.id })))
+      .filter(t => t.dueDate === today || !t.dueDate)
+      .sort((a, b) => {
+        if (!a.startTime && !b.startTime) return 0
+        if (!a.startTime) return 1
+        if (!b.startTime) return -1
+        return a.startTime.localeCompare(b.startTime)
+      }),
+    [lists, today]
   )
 
   return (
@@ -1627,6 +1639,20 @@ function DayView({ lists, onToggleTask, onToggleChecklist }) {
 }
 
 /* ─── BoardDetail ────────────────────────────────────────────────────────────── */
+function NavItem({ label, icon, active, onClick }) {
+  return (
+    <div role="button" tabIndex={0} onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2 }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.overlayW10 }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+      {icon}
+      <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT }}>{label}</span>
+    </div>
+  )
+}
+
 function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, onDeleteBoard }) {
   const [view, setView] = useState('day')
   const [taskDrop, setTaskDrop] = useState(null)
@@ -1765,8 +1791,12 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   }
 
   // ── Keyboard shortcut handler ──
+  const kbRef = useRef({})
+  kbRef.current = { view, focusedCard, openPanel, selectedCards, clipboard, lists, filteredLists, board, setLists, handleOpenPanel, onUpdate }
+
   useEffect(() => {
     const h = e => {
+      const { view, focusedCard, openPanel, selectedCards, clipboard, lists, filteredLists, board, setLists, handleOpenPanel, onUpdate } = kbRef.current
       const tag = e.target.tagName
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || e.target.isContentEditable
 
@@ -1893,20 +1923,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [view, focusedCard, openPanel, selectedCards, clipboard, lists, filteredLists, board, onUpdate])
-
-  /* ── Sidebar nav item ── */
-  const NavItem = ({ label, icon, active, onClick }) => (
-    <div role="button" tabIndex={0} onClick={onClick}
-      aria-current={active ? 'page' : undefined}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2 }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.overlayW10 }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-      {icon}
-      <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT }}>{label}</span>
-    </div>
-  )
+  }, [])
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
