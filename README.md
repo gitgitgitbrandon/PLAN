@@ -7,41 +7,65 @@ A minimal, keyboard-friendly task planner built with React and Vite. Organise wo
 | View | What it shows |
 |---|---|
 | **Day** | Every task due today (or with no due date), sorted by start time with checklist sub-items |
-| **Board** | Kanban-style lists with drag-and-drop columns and cards |
+| **Board** | Kanban-style lists with drag-and-drop columns and cards, in **Classic** (full-width grid) or **Compact** (fixed-width scrolling columns) layout |
 | **Agenda** | The current week as 5 fixed-height day rows — no page scrolling |
 
 ## Features
 
-### Tasks & boards
-- **Multiple boards** — create as many boards as you need; switch from the left sidebar
-- **Kanban lists** — add lists to any board, drag to reorder both lists and cards
-- **Checklists** — nested sub-items per task, each with its own due date and progress bar
+### Boards
+- **Multiple boards** — create as many as you need; switch from the left sidebar
+- **Board colour** — pick an accent colour shown next to the board name and in the sidebar
+- **Starter template** — spin up a ready-made "Kanban Board" (To Do / In Progress / Done) when creating your first board
+- **Board settings** — per-board options for layout mode (Classic/Compact), list width (Compact/Normal/Wide, compact layout only), and new-list colour behaviour (fixed grey or auto-cycling palette)
+- **Undo / redo** — up to 60 steps of history per board
+
+### Lists
+- **Add, rename, delete** lists; newly created lists auto-focus their name field for instant renaming
+- **Drag to reorder** lists, or use the list menu to move left/right
+- **Copy a list** — duplicates the list and all of its tasks (with fresh IDs)
+- **Move a list to another board**
+- **Per-list colour** picker
+
+### Tasks & cards
+- **Drag-and-drop** cards between lists, with a live drop indicator
+- **Quick edit** — hover a card and press **E** (or click the pencil icon) to edit the title inline; a shortcut menu beside the card offers Open card, Edit labels, Edit due date, and Delete card
+- **Full card panel** — click a card to open a detail view with title, description, checklist, due date, time slot, labels, and delete
+- **Checklists** — nested sub-items per task, each with its own optional due date and a progress bar
 - **Due dates & time slots** — assign a date and start/end time; overdue items highlight in red
-- **Notes** — rich description field per task
+- **Notes** — a description field per task
+- **Multi-select** — Shift+click cards to select several at once
+- **Copy / cut / paste cards** via keyboard, and a satisfying confetti burst when you check one off
 
 ### Labels
-- **Colour-coded labels** per task with custom names
-- **Inline editing** — click any label pill to rename and repick colour, with a live preview
-- **Toggle display** — click a label on a card to switch between pill (name + colour) and compact (colour bar only) mode
-
-### Editing
-- **Quick edit** — hover a card and press **E** (or click the pencil icon) to edit the title inline; a shortcut menu appears beside the card with Open, Edit labels, Edit due date, and Delete
-- **Click-to-position cursor** — all rename fields are real inputs; click anywhere in the text to place the cursor
-- **Drag disabled while typing** — parent drag-and-drop is blocked while any rename field is focused
+- **Board-wide label library** — a searchable, Trello-style picker to create, rename, recolour, and delete labels shared across every card on the board
+- **Toggle display** — click a card's labels to switch between full pill (name + colour) and compact (colour bar only) mode
 
 ### Navigation & layout
 - **Week filter** — on Board view, filter cards to only those due this week
 - **Mini calendar** — jump to any week from the Agenda view
 - **Persistent storage** — all data is saved to `localStorage`; nothing leaves the browser
+- **Installable PWA** — works offline and can be added to your home screen / desktop
 
 ## Keyboard shortcuts
 
 | Key | Action |
 |---|---|
-| `E` | Open quick edit on the hovered card |
-| `Enter` | Save / add item |
-| `Escape` | Cancel edit |
-| `← →` | Navigate weeks in Agenda view |
+| `E` | Quick-edit the hovered (or keyboard-focused) card |
+| `Enter` | Save edit / add item, or open the focused card's panel |
+| `Escape` | Close the open panel → clear card selection → clear card focus |
+| `↑ ↓ ← →` / `j k` | Move card focus around the board (or jump to the first card if none is focused) |
+| `← →` | Navigate weeks in the Agenda view |
+| `j k` / `← →` | Navigate to the previous/next card while the card panel is open |
+| `N` | Add a new card to the focused list |
+| `C` | Delete the focused card |
+| `, .` | Move the focused card to the bottom of the adjacent left/right list |
+| `< >` | Move the focused card to the top of the adjacent left/right list |
+| `Shift + Click` | Add/remove a card from the multi-selection |
+| `Ctrl/Cmd + C` | Copy the focused card |
+| `Ctrl/Cmd + X` | Cut the focused card |
+| `Ctrl/Cmd + V` | Paste into the focused list |
+| `Ctrl/Cmd + Z` | Undo |
+| `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` | Redo |
 
 ## Getting started
 
