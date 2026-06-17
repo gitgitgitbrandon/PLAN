@@ -4,7 +4,11 @@
       "Bash(npx vite *)",
       "Bash(npx tsc *)",
       "PowerShell(Add-Type -AssemblyName System.Drawing; $base = \"c:\\\\Users\\\\bobil\\\\OneDrive - Office 365 Fontys\\\\Media\\\\Media semester 4\\\\coding\\\\PLAN\\\\public\"; foreach \\($f in @\\(\"android-chrome-192x192.png\",\"android-chrome-512x512.png\"\\)\\) { $img = [System.Drawing.Image]::FromFile\\(\"$base\\\\$f\"\\); Write-Output \"$f -> $\\($img.Width\\)x$\\($img.Height\\)\"; $img.Dispose\\(\\) })",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(node -e \"require\\('@babel/core'\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(awk 'NR==750,NR==1010' src/App.jsx)",
+      "Bash(awk 'NR==1304,NR==1430' src/App.jsx)"
     ]
   }
 }

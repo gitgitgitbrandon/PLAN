@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, Fragment } from 'react'
+import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, Fragment } from 'react'
 
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 const FONT = "'Archivo', sans-serif"
@@ -60,14 +60,6 @@ const GLOBAL_CSS = `
   .task-card.is-focused { outline: 2px solid ${C.accent} !important; outline-offset: 2px; }
   .task-card.is-selected { background: rgba(243,114,44,0.12) !important; border-color: rgba(243,114,44,0.45) !important; }
   .task-card:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
-  .icon-btn { background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
-  .icon-btn:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; border-radius: 4px; }
-  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-  .view-btn { border: none; background: transparent; padding: 10px 20px; font-size: 11px; font-weight: 800;
-              cursor: pointer; border-radius: 12px; font-family: 'Archivo', sans-serif;
-              color: rgba(255,255,255,0.35); transition: all .15s; letter-spacing: 1px; }
-  .view-btn:hover { background: ${C.border}; color: ${C.textWhite}; }
-  .view-btn.active { background: ${C.accent}; color: ${C.textWhite}; }
   @keyframes check-bounce-anim { 0%{transform:scale(1)} 35%{transform:scale(1.2)} 65%{transform:scale(.95)} 100%{transform:scale(1)} }
   .check-bounce { animation: check-bounce-anim .5s cubic-bezier(.3,.7,.4,1) 1.3s; transform-origin: center; }
   @media (max-width: 640px) { .top-bar h1 { font-size: 20px !important; } }
@@ -166,7 +158,7 @@ function templateBoard() {
 /* ─── Hooks ──────────────────────────────────────────────────────────────────── */
 function useClickOutside(ref, onClose) {
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => { onCloseRef.current = onClose })
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) onCloseRef.current() }
     document.addEventListener('mousedown', h)
@@ -563,9 +555,6 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
   const togItem = id => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, done: !c.done } : c) })
   const delItem = id => onUpdate({ ...task, checklist: cl.filter(c => c.id !== id) })
   const renItem = (id, t) => onUpdate({ ...task, checklist: cl.map(c => c.id === id ? { ...c, text: t } : c) })
-  const addLabel = () => onUpdate({ ...task, labels: [...task.labels, { id: uid(), name: 'LABEL', color: PALETTE[Math.floor(Math.random() * PALETTE.length)] }] })
-  const updLabel = (id, k, v) => onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, [k]: v } : l) })
-  const rmLabel = id => onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
 
   const closeRef = useRef(null)
   useEffect(() => { closeRef.current?.focus() }, [])
@@ -758,13 +747,11 @@ function QItem({ label, color, onClick }) {
   )
 }
 
-function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDelete, compact,
+function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
   isFocused, isSelected, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick,
   boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
   const [burst, setBurst] = useState(null)
   const [qView, setQView] = useState('main') // 'main' | 'labels'
-  const [labelPopup, setLabelPopup] = useState(null)
-  const [labelDraft, setLabelDraft] = useState('')
   const [quickEdit, setQuickEdit] = useState(false)
   const [editDraft, setEditDraft] = useState('')
   const [isHovered, setIsHovered] = useState(false)
@@ -772,7 +759,6 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   const [quickEditRect, setQuickEditRect] = useState(null)
   const [labelsCompact, setLabelsCompact] = useState(false)
   const chkRef = useRef(null)
-  const labelPopupRef = useRef(null)
   const editRef = useRef(null)
   const cardRef = useRef(null)
   const quickMenuRef = useRef(null)
@@ -816,29 +802,6 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
     if (focusedAction === 'quickEdit') { openQuickEdit(); onActionDone?.() }
   }, [isFocused, focusedAction])
 
-  useEffect(() => {
-    if (!labelPopup) return
-    const h = e => { if (labelPopupRef.current && !labelPopupRef.current.contains(e.target)) setLabelPopup(null) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [labelPopup])
-
-  const openLabelPopup = (e, id) => {
-    e.stopPropagation()
-    const l = task.labels.find(l => l.id === id)
-    setLabelDraft(l?.name || '')
-    setLabelPopup(id)
-  }
-  const addLabel = e => {
-    e.stopPropagation()
-    const nl = { id: uid(), name: 'LABEL', color: PALETTE[0] }
-    onUpdate({ ...task, labels: [...task.labels, nl] })
-    setLabelDraft('LABEL')
-    setLabelPopup(nl.id)
-  }
-  const updLabel = (k, v) => onUpdate({ ...task, labels: task.labels.map(l => l.id === labelPopup ? { ...l, [k]: v } : l) })
-  const rmLabel = () => { onUpdate({ ...task, labels: task.labels.filter(l => l.id !== labelPopup) }); setLabelPopup(null) }
-
   const handleToggle = e => {
     e.stopPropagation()
     if (!task.done && chkRef.current) {
@@ -871,7 +834,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         onDragEnd={() => setIsDraggingSelf(false)}
         style={{
           background: '#1E2328', borderRadius: 12,
-          padding: compact ? '12px 14px' : '18px 18px',
+          padding: '18px 18px',
           cursor: 'pointer', position: 'relative',
           border: '2px solid rgba(255,255,255,0.07)',
           transition: 'border-color .15s, transform .12s',
@@ -1022,7 +985,6 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
   const preset = sizePreset || LIST_SIZE_PRESETS.normal
   const isClassic = layoutMode === 'classic'
   const isGray = list.color === C.borderHover
-  const [showCP, setShowCP]           = useState(false)
   const [showMenu, setShowMenu]       = useState(false)
   const [menuPos, setMenuPos]         = useState(null)
   const [showCPMenu, setShowCPMenu]   = useState(false)
@@ -1160,7 +1122,7 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
             <Fragment key={task.id}>
               {showInd && taskDrop.index === idx && <DropLine />}
               <li onDragOver={e => handleCardDragOver(e, idx)} style={{ listStyle: 'none' }}>
-                <TaskCard task={task} listId={list.id} listColor={list.color} listName={list.name}
+                <TaskCard task={task} listId={list.id} listColor={list.color}
                   onToggle={() => togTask(task.id)}
                   onUpdate={u => updTask(task.id, u)}
                   onDelete={() => delTask(task.id)}
@@ -1339,7 +1301,7 @@ function MiniCalendar({ onPickDate, onClose }) {
 }
 
 /* ─── AgendaDay ──────────────────────────────────────────────────────────────── */
-function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, onUpdate, onDelete, onAddTask }) {
+function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, onAddTask }) {
   const [adding, setAdding] = useState(false)
   const [taskText, setTaskText] = useState('')
   const [selListId, setSelListId] = useState(lists[0]?.id || '')
@@ -1431,8 +1393,8 @@ function AgendaDay({ day, tasks, isToday, lists, tags, onUpdateTags, onToggle, o
             </div>
 
             {/* Done toggle */}
-            <div onClick={() => onToggle(t._listId, t.id)} style={{ width: 22, height: 22, borderRadius: '50%', cursor: 'pointer', flexShrink: 0, marginTop: 4, border: t.done ? 'none' : `2px solid ${C.textMuted}`, background: t.done ? t._listColor || C.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {t.done && <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            <div style={{ marginTop: 4, flexShrink: 0 }}>
+              <Chk done={t.done} size={22} color={t._listColor || C.accent} onToggle={() => onToggle(t._listId, t.id)} />
             </div>
           </div>
         ))}
@@ -1525,8 +1487,6 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
   }, [lists, weekDays])
 
   const togTask = (lid, tid) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t) } : l))
-  const updTask = (lid, tid, u) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? u : t) } : l))
-  const delTask = (lid, tid) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: l.tasks.filter(t => t.id !== tid) } : l))
   const addTask = (lid, text, dueDate) => onUpdateLists(lists.map(l => l.id === lid ? { ...l, tasks: [...l.tasks, newTask(text, dueDate)] } : l))
 
   return (
@@ -1553,7 +1513,7 @@ function AgendaView({ lists, onUpdateLists, dayTags, onUpdateDayTags }) {
             isToday={day.date === today} lists={lists}
             tags={dayTags[day.date] || []}
             onUpdateTags={tags => onUpdateDayTags(day.date, tags)}
-            onToggle={togTask} onUpdate={updTask} onDelete={delTask} onAddTask={addTask} />
+            onToggle={togTask} onAddTask={addTask} />
         ))}
       </div>
     </div>
@@ -1716,7 +1676,6 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   // ── Keyboard / selection state ──
   const [focusedCard, setFocusedCard] = useState(null)   // { listId, taskId }
   const [selectedCards, setSelectedCards] = useState(new Set()) // Set<taskId>
-  const [selListMap, setSelListMap] = useState(new Map()) // Map<taskId,listId>
   const [clipboard, setClipboard] = useState(null)   // { task, sourceListId, mode }
   const [openPanel, setOpenPanel] = useState(null)   // { listId, taskId }
   const [focusedAction, setFocusedAction] = useState(null)
@@ -1860,12 +1819,13 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const handleFocusCard = (listId, taskId) => setFocusedCard({ listId, taskId })
   const handleShiftClick = (listId, taskId) => {
     setSelectedCards(prev => { const n = new Set(prev); n.has(taskId) ? n.delete(taskId) : n.add(taskId); return n })
-    setSelListMap(prev => { const n = new Map(prev); n.has(taskId) ? n.delete(taskId) : n.set(taskId, listId); return n })
   }
 
   // ── Keyboard shortcut handler ──
   const kbRef = useRef({})
-  kbRef.current = { view, focusedCard, openPanel, selectedCards, clipboard, lists, filteredLists, board, setLists, handleOpenPanel, onUpdate }
+  useEffect(() => {
+    kbRef.current = { view, focusedCard, openPanel, selectedCards, clipboard, lists, filteredLists, board, setLists, handleOpenPanel, onUpdate }
+  })
 
   useEffect(() => {
     const h = e => {
@@ -1876,7 +1836,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       // Esc — always
       if (e.key === 'Escape') {
         if (openPanel) { setOpenPanel(null); return }
-        if (selectedCards.size) { setSelectedCards(new Set()); setSelListMap(new Map()); return }
+        if (selectedCards.size) { setSelectedCards(new Set()); return }
         if (focusedCard) { setFocusedCard(null); return }
         return
       }
@@ -2068,7 +2028,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       <main style={{ flex: 1, overflow: (view === 'agenda' || (view === 'board' && layoutMode === 'compact')) ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* ── Top bar ── */}
-        <header style={{ minHeight: 72, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
+        <header className="top-bar" style={{ minHeight: 72, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowBoardColorPicker(v => !v)} aria-label="Change board color" aria-haspopup="true" aria-expanded={showBoardColorPicker}
