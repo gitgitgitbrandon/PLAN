@@ -18,6 +18,7 @@ const C = {
   dangerBg: '#f9414433',
   border: '#222426',
   borderHover: '#3A3A3A',
+  hoverBlue: '#4da6ff',
   shadow: 'rgba(0,0,0,0.1)',
   shadowDeep: 'rgba(0,0,0,0.5)',
   overlay06: 'rgba(0,0,0,0.06)',
@@ -53,9 +54,9 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
   input, textarea { caret-color: currentColor; }
   input:focus, textarea:focus { outline: none; }
-  .task-card:hover { border-color: rgba(255,255,255,0.25) !important; transform: translateY(-1px); }
+  .task-card:hover { border-color: ${C.hoverBlue} !important; }
   .task-card:hover .chk-tr { opacity: 1 !important; }
-  .task-card[draggable]:active { opacity: 0.5; }
+  .task-card.is-dragging { opacity: 0.5; }
   .task-card.is-focused { outline: 2px solid ${C.accent} !important; outline-offset: 2px; }
   .task-card.is-selected { background: rgba(243,114,44,0.12) !important; border-color: rgba(243,114,44,0.45) !important; }
   .task-card:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
@@ -147,9 +148,9 @@ function templateBoard() {
   return {
     id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(),
     lists: [
-      { id: uid(), name: 'TO DO', color: PALETTE[0], collapsed: false, tasks: [] },
-      { id: uid(), name: 'IN PROGRESS', color: PALETTE[1], collapsed: false, tasks: [] },
-      { id: uid(), name: 'DONE', color: PALETTE[2], collapsed: false, tasks: [] },
+      { id: uid(), name: 'TO DO', color: '#FF573B', tasks: [] },
+      { id: uid(), name: 'IN PROGRESS', color: '#0988EF', tasks: [] },
+      { id: uid(), name: 'DONE', color: '#018848', tasks: [] },
     ],
   }
 }
@@ -756,6 +757,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   const [quickEdit, setQuickEdit] = useState(false)
   const [editDraft, setEditDraft] = useState('')
   const [isHovered, setIsHovered] = useState(false)
+  const [isDraggingSelf, setIsDraggingSelf] = useState(false)
   const [quickEditRect, setQuickEditRect] = useState(null)
   const [labelsCompact, setLabelsCompact] = useState(false)
   const chkRef = useRef(null)
@@ -838,7 +840,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
   return (
     <>
       <div ref={cardRef}
-        className={`task-card${isFocused ? ' is-focused' : ''}${isSelected ? ' is-selected' : ''}`}
+        className={`task-card${isFocused ? ' is-focused' : ''}${isSelected ? ' is-selected' : ''}${isDraggingSelf ? ' is-dragging' : ''}`}
         role="article"
         tabIndex={0}
         aria-label={`${task.text}${task.done ? ', completed' : ''}`}
@@ -854,13 +856,13 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('taskId', task.id); e.dataTransfer.setData('sourceListId', listId); e.dataTransfer.effectAllowed = 'move' }}
+        onDragStart={e => { e.stopPropagation(); e.dataTransfer.setData('taskId', task.id); e.dataTransfer.setData('sourceListId', listId); e.dataTransfer.effectAllowed = 'move'; setIsDraggingSelf(true) }}
+        onDragEnd={() => setIsDraggingSelf(false)}
         style={{
           background: '#1E2328', borderRadius: 12,
           padding: compact ? '12px 14px' : '18px 18px',
           cursor: 'pointer', position: 'relative',
-          border: '1px solid rgba(255,255,255,0.07)',
-          opacity: task.done ? 0.55 : 1,
+          border: '2px solid rgba(255,255,255,0.07)',
           transition: 'border-color .15s, transform .12s',
         }}
       >
@@ -901,7 +903,7 @@ function TaskCard({ task, listId, listColor, listName, onToggle, onUpdate, onDel
               }}>
               {task.done && <svg width="9" height="9" viewBox="0 0 12 12" className={burst ? 'check-bounce' : ''}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </div>
-            <div className="task-text" style={{ flex: 1, fontSize: 14, fontWeight: 600, color: task.done ? C.textMuted : C.textWhite, lineHeight: 1.5, textDecoration: task.done ? 'line-through' : 'none' }}>
+            <div className="task-text" style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.textWhite, lineHeight: 1.5 }}>
               {task.text}
             </div>
             <div onClick={e => { e.stopPropagation(); openQuickEdit() }} className="chk-tr" style={{
@@ -1015,6 +1017,7 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
   const inputRef  = useRef(null)
   const menuRef   = useRef(null)
   const menuBtnRef = useRef(null)
+  const addBoxRef = useRef(null)
 
   useEffect(() => {
     if (!showMenu) return
@@ -1026,6 +1029,17 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [showMenu])
+
+  useEffect(() => {
+    if (!adding) return
+    const h = e => {
+      if (addBoxRef.current && !addBoxRef.current.contains(e.target)) {
+        setAdding(false); setTaskText('')
+      }
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [adding])
 
   const openMenu = e => {
     e.stopPropagation()
@@ -1081,13 +1095,12 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
       }}
       onDrop={e => { if (e.dataTransfer.types.includes('taskid')) handleDrop(e); else onListDrop(e) }}
       onDragEnd={onListDragEnd}
-      style={{ borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.4 : 1, transition: 'opacity .15s' }}>
+      style={{ borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s' }}>
       {/* List header */}
-      <div onClick={() => updList({ collapsed: !list.collapsed })}
-        style={{ padding: '36px 28px 24px', cursor: 'pointer', userSelect: 'none', minHeight: 140, position: 'relative' }}>
-        <div onClick={e => e.stopPropagation()} style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ padding: '36px 28px 24px', userSelect: 'none', minHeight: 140, position: 'relative' }}>
+        <div style={{ position: 'relative', zIndex: 1 }}>
           <Editable value={list.name} onChange={v => updList({ name: v })} style={{
-            fontSize: 40, fontFamily: FONT, fontWeight: 900, color: C.text, letterSpacing: -2, lineHeight: 1, display: 'block',
+            fontSize: 40, fontFamily: FONT, fontWeight: 900, color: list.color === C.borderHover ? C.textWhite : C.text, letterSpacing: -2, lineHeight: 1, display: 'block',
           }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
@@ -1095,22 +1108,18 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
             {list.tasks.length} {list.tasks.length === 1 ? 'TASK' : 'TASKS'}
           </span>
           <div style={{ flex: 1 }} />
-          <div onClick={e => e.stopPropagation()}>
+          <div>
             <div ref={menuBtnRef} onClick={openMenu} style={{ width: 28, height: 28, borderRadius: 8, background: C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
               {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: C.overlayB40 }} />)}
             </div>
           </div>
         </div>
-        <svg width="12" height="12" viewBox="0 0 12 12" style={{ position: 'absolute', bottom: 8, left: '50%', transform: `translateX(-50%) rotate(${list.collapsed ? '180deg' : '0deg'})`, transition: 'transform .2s', opacity: 0.3 }}>
-          <path d="M3 4l3 3 3-3" stroke={C.text} strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
       </div>
 
       {/* Tasks */}
-      {!list.collapsed && (
-        <ul role="list" aria-label={`${list.name} tasks`}
-          onDragOver={handleAreaDragOver} onDrop={handleDrop}
-          style={{ padding: '0 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, listStyle: 'none', margin: 0 }}>
+      <ul role="list" aria-label={`${list.name} tasks`}
+        onDragOver={handleAreaDragOver} onDrop={handleDrop}
+        style={{ padding: '0 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, listStyle: 'none', margin: 0 }}>
           {list.tasks.map((task, idx) => (
             <Fragment key={task.id}>
               {showInd && taskDrop.index === idx && <DropLine />}
@@ -1136,11 +1145,17 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
           {showInd && taskDrop.index === list.tasks.length && <DropLine />}
 
           {adding ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '4px 8px' }}>
-              <input ref={inputRef} value={taskText} onChange={e => setTaskText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setAdding(false); setTaskText('') } }}
-                placeholder="Task name…"
-                style={{ width: '100%', border: 'none', borderRadius: R - 4, padding: '12px 16px', fontSize: 14, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.card, color: C.text, boxSizing: 'border-box' }} />
+            <div ref={addBoxRef} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{
+                background: '#1E2328', borderRadius: 12, padding: '18px 18px',
+                border: '2px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'flex-start', gap: 9,
+              }}>
+                <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 2, border: '2px solid rgba(255,255,255,0.22)' }} />
+                <input ref={inputRef} value={taskText} onChange={e => setTaskText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setAdding(false); setTaskText('') } }}
+                  placeholder="Task name…"
+                  style={{ flex: 1, border: 'none', padding: 0, fontSize: 14, fontFamily: FONT, fontWeight: 600, outline: 'none', background: 'transparent', color: C.textWhite, lineHeight: 1.5 }} />
+              </div>
               <div onClick={addTask} style={{ fontSize: 12, color: C.overlayB35, cursor: 'pointer', padding: '10px 16px', textAlign: 'center', borderRadius: R - 4, transition: 'all .15s', fontFamily: FONT, fontWeight: 800, letterSpacing: 0.5 }}
                 onMouseEnter={e => { e.target.style.background = C.overlay06; e.target.style.color = C.text }}
                 onMouseLeave={e => { e.target.style.background = 'transparent'; e.target.style.color = C.overlayB35 }}>
@@ -1154,8 +1169,7 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
               + ADD TASK
             </div>
           )}
-        </ul>
-      )}
+      </ul>
       {showMenu && menuPos && (
         <div ref={menuRef} onClick={e => e.stopPropagation()} style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 10002, width: 210, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: FONT }}>
           <div style={{ padding: '16px 14px 14px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
@@ -1699,7 +1713,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const togTask = (lid, tid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t) } : l))
   const togChecklist = (lid, tid, iid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, checklist: (t.checklist || []).map(ci => ci.id === iid ? { ...ci, done: !ci.done } : ci) } : t) } : l))
   const delList = id => setLists(p => p.filter(l => l.id !== id))
-  const addList = () => setLists(p => [...p, { id: uid(), name: 'NEW LIST', color: PALETTE[p.length % PALETTE.length], collapsed: false, tasks: [] }])
+  const addList = () => setLists(p => [...p, { id: uid(), name: 'NEW LIST', color: C.borderHover, tasks: [] }])
 
   // ── List drag ──
   const [dragListId, setDragListId] = useState(null)
@@ -2053,7 +2067,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               {filteredLists.map((list, idx) => (
                 <Fragment key={list.id}>
                   {dropIndex === idx && dragListId && list.id !== dragListId && (
-                    <div style={{ borderRadius: R, border: `2px dashed ${C.overlayW30}`, minHeight: 160, background: 'transparent' }} />
+                    <div style={{ borderRadius: R, minHeight: 160, background: 'rgba(255,255,255,0.05)' }} />
                   )}
                   <TaskList list={list}
                     onUpdate={u => updList(list.id, u)}
@@ -2097,7 +2111,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 </Fragment>
               ))}
               {dropIndex === filteredLists.length && dragListId && (
-                <div style={{ borderRadius: R, border: `2px dashed ${C.overlayW30}`, minHeight: 160, background: 'transparent' }} />
+                <div style={{ borderRadius: R, minHeight: 160, background: 'rgba(255,255,255,0.05)' }} />
               )}
               <button onClick={addList} style={{ border: `2px dashed ${C.overlayW15}`, background: 'transparent', borderRadius: R, padding: 32, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, color: C.overlayW30, letterSpacing: 1, transition: 'all .2s', minHeight: 160 }}
                 onMouseEnter={e => { e.target.style.borderColor = C.overlayW40; e.target.style.color = C.textWhite }}
