@@ -8,7 +8,23 @@
       "Bash(node -e \"require\\('@babel/core'\\)\")",
       "Bash(npx eslint *)",
       "Bash(awk 'NR==750,NR==1010' src/App.jsx)",
-      "Bash(awk 'NR==1304,NR==1430' src/App.jsx)"
+      "Bash(awk 'NR==1304,NR==1430' src/App.jsx)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(npx --yes chromium-cli --version)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(command -v chromium-cli)",
+      "Bash(echo \"exit:$?\")",
+      "Read(//usr/local/**)",
+      "Read(//c/Users/bobil/.npm-global/**)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(node tmp_screenshot.cjs)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(rm -f tmp_screenshot.cjs tmp_main.png tmp_boardswitcher.png tmp_viewmenu.png)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, 
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 const FONT = "'Archivo', sans-serif"
 const R = 20
+const LIST_R = 10
 
 const C = {
   bg: '#141517',
@@ -1078,11 +1079,11 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
       onDrop={e => { if (e.dataTransfer.types.includes('taskid')) handleDrop(e); else onListDrop(e) }}
       onDragEnd={onListDragEnd}
       style={isClassic
-        ? { borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer' }
-        : { borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer', width: preset.width, flexShrink: 0 }}>
+        ? { borderRadius: LIST_R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer' }
+        : { borderRadius: LIST_R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer', width: preset.width, flexShrink: 0 }}>
       {/* List header */}
       {isClassic ? (
-        <div style={{ padding: '36px 28px 24px', userSelect: 'none', minHeight: 140, position: 'relative' }}>
+        <div style={{ padding: '18px 28px 24px', userSelect: 'none', minHeight: 122, position: 'relative' }}>
           <div style={{ position: 'relative', zIndex: 1 }}>
             <Editable ref={nameRef} value={list.name} onChange={v => updList({ name: v })} style={{
               fontSize: 40, fontFamily: FONT, fontWeight: 900, color: isGray ? C.textWhite : C.text, letterSpacing: -2, lineHeight: 1, display: 'block',
@@ -2044,7 +2045,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 onChange={e => setTitleDraft(e.target.value)}
                 onBlur={saveTitle}
                 onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setTitleDraft(board.name); setEditingTitle(false) } }}
-                style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: board.color }}
+                style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: C.textWhite }}
               />
             ) : (
               <h1 className="renameable" onClick={() => setEditingTitle(true)} style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text' }}>{board.name}</h1>
@@ -2147,7 +2148,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               {filteredLists.map((list, idx) => (
                 <Fragment key={list.id}>
                   {dropIndex === idx && dragListId && list.id !== dragListId && (
-                    <div style={{ borderRadius: R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
+                    <div style={{ borderRadius: LIST_R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
                   )}
                   <TaskList list={list}
                     sizePreset={sizePreset}
@@ -2195,9 +2196,9 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 </Fragment>
               ))}
               {dropIndex === filteredLists.length && dragListId && (
-                <div style={{ borderRadius: R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
+                <div style={{ borderRadius: LIST_R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
               )}
-              <button onClick={addList} style={{ border: `2px dashed ${C.overlayW15}`, background: 'transparent', borderRadius: R, padding: 32, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, color: C.overlayW30, letterSpacing: 1, transition: 'all .2s', minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}) }}
+              <button onClick={addList} style={{ border: `2px dashed ${C.overlayW15}`, background: 'transparent', borderRadius: LIST_R, padding: 32, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, color: C.overlayW30, letterSpacing: 1, transition: 'all .2s', minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}) }}
                 onMouseEnter={e => { e.target.style.borderColor = C.overlayW40; e.target.style.color = C.textWhite }}
                 onMouseLeave={e => { e.target.style.borderColor = C.overlayW15; e.target.style.color = C.overlayW30 }}>
                 + NEW LIST
