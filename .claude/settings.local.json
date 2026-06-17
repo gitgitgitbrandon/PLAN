@@ -24,7 +24,19 @@
       "Bash(node tmp_screenshot.cjs)",
       "Bash(pkill -f \"vite\")",
       "Bash(rm -f tmp_screenshot.cjs tmp_main.png tmp_boardswitcher.png tmp_viewmenu.png)",
-      "Bash(npm uninstall *)"
+      "Bash(npm uninstall *)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(netstat -ano)",
+      "Bash(grep -n \"^function BoardLabelPicker\\\\|^  return \\($\\\\|^}\" src/App.jsx)",
+      "Bash(grep -n \"function BoardLabelPicker\\\\|const iS = \\\\|const EditForm = \\\\|^  return \\($\" src/App.jsx)",
+      "Bash(node tmp_insert.cjs)",
+      "Bash(nohup npm run dev)",
+      "Bash(disown)",
+      "Bash(curl -sf http://localhost:5173)",
+      "Bash(break)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:5173/src/App.jsx)",
+      "Bash(curl -s http://localhost:5173/)"
     ]
   }
 }

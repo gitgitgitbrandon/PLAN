@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, Fragment } from 'react'
 
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
-const FONT = "'Archivo', sans-serif"
+const FONT = "'Inter', sans-serif"
 const R = 20
 const LIST_R = 10
 
@@ -45,16 +45,18 @@ const PALETTE = [
 
 /* ─── Global CSS ─────────────────────────────────────────────────────────────── */
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: #141517; }
-  body { font-family: 'Archivo', sans-serif; }
+  body { font-family: 'Inter', sans-serif; }
   #root { width: 100% !important; max-width: 100% !important; margin: 0 !important;
           border: none !important; display: block !important; text-align: left !important; min-height: 100vh; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
   input, textarea { caret-color: currentColor; }
   input:focus, textarea:focus { outline: none; }
+  button { transition: transform 120ms cubic-bezier(.4,0,.2,1), opacity 120ms ease, background 150ms ease, filter 150ms ease; }
+  button:active:not(:disabled) { transform: scale(0.94); filter: brightness(0.92); }
   .task-card:hover { border-color: ${C.hoverBlue} !important; }
   .task-card:hover .chk-tr { opacity: 1 !important; }
   .task-card.is-dragging { opacity: 0.5; }
@@ -261,6 +263,29 @@ function ColorGrid({ selected, onPick }) {
   )
 }
 
+function LabelEditForm({ draft, setDraft, onSave, onDelete: onDel, saveLabel = 'Save' }) {
+  const inputStyle = { width: '100%', border: 'none', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.overlayW10, color: C.textWhite, marginBottom: 8 }
+  return (
+    <div style={{ padding: '0 12px 12px' }}>
+      <div style={{ height: 32, borderRadius: 7, background: draft.color, marginBottom: 10, display: 'flex', alignItems: 'center', padding: '0 10px' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.6)' }}>{draft.name || ' '}</span>
+      </div>
+      <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+        placeholder="Label name (optional)" style={inputStyle} />
+      <div style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 6 }}>SELECT A COLOR</div>
+      <ColorGrid selected={draft.color} onPick={c => setDraft(d => ({ ...d, color: c }))} />
+      <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={onSave}
+          style={{ flex: 1, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 700, background: C.accent, color: C.textWhite, cursor: 'pointer', fontFamily: FONT }}>{saveLabel}</button>
+        {onDel && (
+          <button onClick={onDel}
+            style={{ border: 'none', borderRadius: 6, padding: '7px 12px', fontSize: 12, fontWeight: 700, background: C.dangerBg, color: C.danger, cursor: 'pointer', fontFamily: FONT }}>Delete</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreate, onUpdate, onDelete, onClose, style = {} }) {
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -293,7 +318,6 @@ function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreat
     setNewDraft({ name: '', color: PALETTE[0] })
   }
 
-  const iS = { width: '100%', border: 'none', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.overlayW10, color: C.textWhite, marginBottom: 8 }
 
   const header = (title) => (
     <div style={{ display: 'flex', alignItems: 'center', padding: '10px 12px 8px' }}>
@@ -307,45 +331,26 @@ function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreat
     </div>
   )
 
-  const EditForm = ({ draft, setDraft, onSave, onDelete: onDel, saveLabel = 'Save' }) => (
-    <div style={{ padding: '0 12px 12px' }}>
-      <div style={{ height: 32, borderRadius: 7, background: draft.color, marginBottom: 10, display: 'flex', alignItems: 'center', padding: '0 10px' }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.6)' }}>{draft.name || ' '}</span>
-      </div>
-      <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
-        placeholder="Label name (optional)" style={iS} />
-      <div style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1, marginBottom: 6 }}>SELECT A COLOR</div>
-      <ColorGrid selected={draft.color} onPick={c => setDraft(d => ({ ...d, color: c }))} />
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={onSave}
-          style={{ flex: 1, border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 700, background: C.accent, color: C.textWhite, cursor: 'pointer', fontFamily: FONT }}>{saveLabel}</button>
-        {onDel && (
-          <button onClick={onDel}
-            style={{ border: 'none', borderRadius: 6, padding: '7px 12px', fontSize: 12, fontWeight: 700, background: C.dangerBg, color: C.danger, cursor: 'pointer', fontFamily: FONT }}>Delete</button>
-        )}
-      </div>
-    </div>
-  )
 
   return (
     <div ref={ref} style={{ width: 250, background: '#2B2F34', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.7)', fontFamily: FONT, overflow: 'hidden', ...style }}>
       {editingId ? (
         <>
           {header('Edit label')}
-          <EditForm draft={editDraft} setDraft={setEditDraft} onSave={saveEdit}
+          <LabelEditForm draft={editDraft} setDraft={setEditDraft} onSave={saveEdit}
             onDelete={() => { onDelete(editingId); setEditingId(null) }} />
         </>
       ) : creating ? (
         <>
           {header('Create label')}
-          <EditForm draft={newDraft} setDraft={setNewDraft} onSave={handleCreate} saveLabel="Create label" />
+          <LabelEditForm draft={newDraft} setDraft={setNewDraft} onSave={handleCreate} saveLabel="Create label" />
         </>
       ) : (
         <>
           {header('Labels')}
           <div style={{ padding: '0 10px 6px' }}>
             <input ref={searchRef} value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search labels…" style={{ ...iS, marginBottom: 0 }} />
+              placeholder="Search labels…" style={{ width: '100%', border: 'none', borderRadius: 6, padding: '8px 10px', fontSize: 12, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.overlayW10, color: C.textWhite }} />
           </div>
           <div style={{ maxHeight: 240, overflowY: 'auto', padding: '2px 0' }}>
             {filtered.length === 0 && (
@@ -355,12 +360,12 @@ function BoardLabelPicker({ boardLabels = [], cardLabels = [], onToggle, onCreat
               const on = isOnCard(label.id)
               return (
                 <div key={label.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 10px', cursor: 'pointer' }}
-                  onClick={() => onToggle(label)}>
+                  onClick={e => { if (label.name) onToggle(label); else startEdit(label, e) }}>
                   <div style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0, border: `2px solid ${on ? label.color : C.textMuted}`, background: on ? label.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {on && <svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </div>
                   <div style={{ flex: 1, height: 32, borderRadius: 6, background: label.color, display: 'flex', alignItems: 'center', padding: '0 10px', overflow: 'hidden' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.65)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(0,0,0,0.65)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label.name || 'Click to add a name'}</span>
                   </div>
                   <button onClick={e => startEdit(label, e)}
                     style={{ width: 28, height: 28, borderRadius: 6, background: C.overlayW10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
@@ -623,14 +628,8 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
                       onCreateBoardLabel?.(nl)
                       onUpdate({ ...task, labels: [...task.labels, { ...nl }] })
                     }}
-                    onUpdate={(id, patch) => {
-                      onUpdateBoardLabel?.(id, patch)
-                      onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, ...patch } : l) })
-                    }}
-                    onDelete={id => {
-                      onDeleteBoardLabel?.(id)
-                      onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
-                    }}
+                    onUpdate={(id, patch) => onUpdateBoardLabel?.(id, patch)}
+                    onDelete={id => onDeleteBoardLabel?.(id)}
                     onClose={() => setLabelPickerOpen(false)}
                   />
                 </div>
@@ -941,14 +940,8 @@ function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
                   onCreateBoardLabel?.(nl)
                   onUpdate({ ...task, labels: [...task.labels, { ...nl }] })
                 }}
-                onUpdate={(id, patch) => {
-                  onUpdateBoardLabel?.(id, patch)
-                  onUpdate({ ...task, labels: task.labels.map(l => l.id === id ? { ...l, ...patch } : l) })
-                }}
-                onDelete={id => {
-                  onDeleteBoardLabel?.(id)
-                  onUpdate({ ...task, labels: task.labels.filter(l => l.id !== id) })
-                }}
+                onUpdate={(id, patch) => onUpdateBoardLabel?.(id, patch)}
+                onDelete={id => onDeleteBoardLabel?.(id)}
                 onClose={() => setQView('main')}
                 style={{ boxShadow: 'none', borderRadius: 0 }}
               />
@@ -1963,7 +1956,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
 
       {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-      <nav aria-label="Application navigation" style={{ width: 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      <nav aria-label="Application navigation" style={{ width: 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
 
         {/* Branding */}
         <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
@@ -1988,7 +1981,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         <div style={{ height: 1, background: C.border, margin: '4px 16px 16px' }} aria-hidden="true" />
 
         {/* Boards list */}
-        <div style={{ padding: '0 8px', flex: 1 }}>
+        <div style={{ padding: '0 8px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
           <p style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1.5, padding: '0 8px 8px', fontFamily: FONT, margin: 0 }}>BOARDS</p>
           <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {boards.map(b => (
