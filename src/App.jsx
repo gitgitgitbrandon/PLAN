@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Fragment } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, Fragment } from 'react'
 
 /* ─── Design tokens ──────────────────────────────────────────────────────────── */
 const FONT = "'Archivo', sans-serif"
@@ -70,7 +70,7 @@ const GLOBAL_CSS = `
   .view-btn.active { background: ${C.accent}; color: ${C.textWhite}; }
   @keyframes check-bounce-anim { 0%{transform:scale(1)} 35%{transform:scale(1.2)} 65%{transform:scale(.95)} 100%{transform:scale(1)} }
   .check-bounce { animation: check-bounce-anim .5s cubic-bezier(.3,.7,.4,1) 1.3s; transform-origin: center; }
-  @media (max-width: 640px) { .top-bar h1 { font-size: 20px !important; } .board-grid { grid-template-columns: 1fr !important; } }
+  @media (max-width: 640px) { .top-bar h1 { font-size: 20px !important; } }
   @media (hover: none) { .chk-tr { opacity: 1 !important; } }
   .task-chk { opacity: 0; transition: opacity .15s, border-color .15s, background .15s; }
   .task-card:hover .task-chk { opacity: 1; }
@@ -140,13 +140,21 @@ const DEFAULT_BOARD_LABELS = () => [
   { id: uid(), name: '', color: '#277da1' },
 ]
 
+const DEFAULT_BOARD_SETTINGS = () => ({ listWidth: 'normal', newListColorMode: 'cycle', layoutMode: 'classic' })
+
+const LIST_SIZE_PRESETS = {
+  compact: { width: 220, titleSize: 15, headerPad: '10px 14px' },
+  normal:  { width: 272, titleSize: 18, headerPad: '14px 16px' },
+  wide:    { width: 320, titleSize: 21, headerPad: '16px 20px' },
+}
+
 function newBoard(name) {
-  return { id: uid(), name, color: PALETTE[0], lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS() }
+  return { id: uid(), name, color: PALETTE[0], lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS() }
 }
 
 function templateBoard() {
   return {
-    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(),
+    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(),
     lists: [
       { id: uid(), name: 'TO DO', color: '#FF573B', tasks: [] },
       { id: uid(), name: 'IN PROGRESS', color: '#0988EF', tasks: [] },
@@ -167,10 +175,13 @@ function useClickOutside(ref, onClose) {
 }
 
 /* ─── Editable ───────────────────────────────────────────────────────────────── */
-function Editable({ value, onChange, style }) {
+const Editable = forwardRef(function Editable({ value, onChange, style }, fwdRef) {
   const [draft, setDraft] = useState(value)
   const ref = useRef(null)
   useEffect(() => { setDraft(value) }, [value])
+  useImperativeHandle(fwdRef, () => ({
+    focus: () => { ref.current?.focus(); ref.current?.select() },
+  }))
   return (
     <input ref={ref} value={draft}
       draggable={false}
@@ -190,7 +201,7 @@ function Editable({ value, onChange, style }) {
       }}
     />
   )
-}
+})
 
 /* ─── ColorPicker ────────────────────────────────────────────────────────────── */
 function ColorPicker({ colors, current, onPick, onClose }) {
@@ -1006,7 +1017,11 @@ function DropLine() {
 function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight, boards, currentBoardId, onMoveToBoard,
   taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
   focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone,
+  requestRename, onRenameDone, sizePreset, layoutMode,
   boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
+  const preset = sizePreset || LIST_SIZE_PRESETS.normal
+  const isClassic = layoutMode === 'classic'
+  const isGray = list.color === C.borderHover
   const [showCP, setShowCP]           = useState(false)
   const [showMenu, setShowMenu]       = useState(false)
   const [menuPos, setMenuPos]         = useState(null)
@@ -1018,6 +1033,11 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
   const menuRef   = useRef(null)
   const menuBtnRef = useRef(null)
   const addBoxRef = useRef(null)
+  const nameRef = useRef(null)
+
+  useEffect(() => {
+    if (requestRename === list.id) { nameRef.current?.focus(); onRenameDone?.() }
+  }, [requestRename])
 
   useEffect(() => {
     if (!showMenu) return
@@ -1095,26 +1115,42 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
       }}
       onDrop={e => { if (e.dataTransfer.types.includes('taskid')) handleDrop(e); else onListDrop(e) }}
       onDragEnd={onListDragEnd}
-      style={{ borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s' }}>
+      style={isClassic
+        ? { borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer' }
+        : { borderRadius: R, background: list.color, position: 'relative', opacity: isDragging ? 0.15 : 1, transition: 'opacity .15s', cursor: 'pointer', width: preset.width, flexShrink: 0 }}>
       {/* List header */}
-      <div style={{ padding: '36px 28px 24px', userSelect: 'none', minHeight: 140, position: 'relative' }}>
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <Editable value={list.name} onChange={v => updList({ name: v })} style={{
-            fontSize: 40, fontFamily: FONT, fontWeight: 900, color: list.color === C.borderHover ? C.textWhite : C.text, letterSpacing: -2, lineHeight: 1, display: 'block',
-          }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: C.overlayB40, fontFamily: FONT, letterSpacing: 1 }}>
-            {list.tasks.length} {list.tasks.length === 1 ? 'TASK' : 'TASKS'}
-          </span>
-          <div style={{ flex: 1 }} />
-          <div>
-            <div ref={menuBtnRef} onClick={openMenu} style={{ width: 28, height: 28, borderRadius: 8, background: C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-              {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: C.overlayB40 }} />)}
+      {isClassic ? (
+        <div style={{ padding: '36px 28px 24px', userSelect: 'none', minHeight: 140, position: 'relative' }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <Editable ref={nameRef} value={list.name} onChange={v => updList({ name: v })} style={{
+              fontSize: 40, fontFamily: FONT, fontWeight: 900, color: isGray ? C.textWhite : C.text, letterSpacing: -2, lineHeight: 1, display: 'block',
+            }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: isGray ? C.overlayW40 : C.overlayB40, fontFamily: FONT, letterSpacing: 1 }}>
+              {list.tasks.length} {list.tasks.length === 1 ? 'TASK' : 'TASKS'}
+            </span>
+            <div style={{ flex: 1 }} />
+            <div ref={menuBtnRef} onClick={openMenu} style={{ width: 28, height: 28, borderRadius: 8, background: isGray ? C.overlayW10 : C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: isGray ? C.overlayW40 : C.overlayB40 }} />)}
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ padding: preset.headerPad, userSelect: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Editable ref={nameRef} value={list.name} onChange={v => updList({ name: v })} style={{
+              fontSize: preset.titleSize, fontFamily: FONT, fontWeight: 800, color: isGray ? C.textWhite : C.text, letterSpacing: -0.3, lineHeight: 1.2, display: 'block',
+            }} />
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 800, color: isGray ? C.overlayW40 : C.overlayB40, fontFamily: FONT, letterSpacing: 0.5, flexShrink: 0 }}>
+            {list.tasks.length}
+          </span>
+          <div ref={menuBtnRef} onClick={openMenu} style={{ width: 26, height: 26, borderRadius: 8, background: isGray ? C.overlayW10 : C.overlayB10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
+            {[0,1,2].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: isGray ? C.overlayW40 : C.overlayB40 }} />)}
+          </div>
+        </div>
+      )}
 
       {/* Tasks */}
       <ul role="list" aria-label={`${list.name} tasks`}
@@ -1685,8 +1721,22 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const [openPanel, setOpenPanel] = useState(null)   // { listId, taskId }
   const [focusedAction, setFocusedAction] = useState(null)
   const [requestAddInList, setRequestAddInList] = useState(null)
+  const [requestRenameList, setRequestRenameList] = useState(null)
+  const [showBoardMenu, setShowBoardMenu] = useState(false)
+  const [showBoardColorPicker, setShowBoardColorPicker] = useState(false)
   const undoStack = useRef([])
   const redoStack = useRef([])
+  const boardMenuRef = useRef(null)
+  const boardMenuBtnRef = useRef(null)
+
+  useEffect(() => {
+    if (!showBoardMenu) return
+    const h = e => {
+      if (!boardMenuRef.current?.contains(e.target) && !boardMenuBtnRef.current?.contains(e.target)) setShowBoardMenu(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [showBoardMenu])
 
   useEffect(() => { setTitleDraft(board.name) }, [board.name])
 
@@ -1698,6 +1748,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
 
   const lists = board.lists
   const dayTags = board.dayTags || {}
+  const settings = board.settings || DEFAULT_BOARD_SETTINGS()
+  const sizePreset = LIST_SIZE_PRESETS[settings.listWidth] || LIST_SIZE_PRESETS.normal
+  const layoutMode = settings.layoutMode || 'classic'
+  const updateSettings = patch => boardUpdate({ ...board, settings: { ...settings, ...patch } })
 
   // Wrap onUpdate with undo history tracking
   const boardUpdate = updatedBoard => {
@@ -1713,7 +1767,12 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const togTask = (lid, tid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, done: !t.done } : t) } : l))
   const togChecklist = (lid, tid, iid) => setLists(p => p.map(l => l.id === lid ? { ...l, tasks: l.tasks.map(t => t.id === tid ? { ...t, checklist: (t.checklist || []).map(ci => ci.id === iid ? { ...ci, done: !ci.done } : ci) } : t) } : l))
   const delList = id => setLists(p => p.filter(l => l.id !== id))
-  const addList = () => setLists(p => [...p, { id: uid(), name: 'NEW LIST', color: C.borderHover, tasks: [] }])
+  const addList = () => {
+    const color = settings.newListColorMode === 'cycle' ? PALETTE[lists.length % PALETTE.length] : C.borderHover
+    const nl = { id: uid(), name: 'NEW LIST', color, tasks: [] }
+    setLists(p => [...p, nl])
+    setRequestRenameList(nl.id)
+  }
 
   // ── List drag ──
   const [dragListId, setDragListId] = useState(null)
@@ -2006,12 +2065,18 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       </nav>
 
       {/* ════════════════ MAIN CONTENT ════════════════ */}
-      <main style={{ flex: 1, overflow: view === 'agenda' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <main style={{ flex: 1, overflow: (view === 'agenda' || (view === 'board' && layoutMode === 'compact')) ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* ── Top bar ── */}
         <header style={{ minHeight: 72, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: board.color }} />
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setShowBoardColorPicker(v => !v)} aria-label="Change board color" aria-haspopup="true" aria-expanded={showBoardColorPicker}
+                style={{ width: 10, height: 10, borderRadius: 3, background: board.color, border: 'none', padding: 0, cursor: 'pointer' }} />
+              {showBoardColorPicker && (
+                <ColorPicker colors={PALETTE} current={board.color} onPick={c => boardUpdate({ ...board, color: c })} onClose={() => setShowBoardColorPicker(false)} />
+              )}
+            </div>
             {editingTitle ? (
               <input
                 autoFocus
@@ -2026,50 +2091,107 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
             )}
           </div>
 
-          {/* Week filter (board only) */}
-          {view === 'board' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <div onClick={() => setWeekFilter(!weekFilter)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: weekFilter ? C.accent : C.border, borderRadius: 8, padding: '6px 12px', transition: 'background .15s' }}>
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textWhite} strokeWidth="1.3" /><line x1="2" y1="7" x2="14" y2="7" stroke={C.textWhite} strokeWidth="1.3" /><line x1="6" y1="1" x2="6" y2="5" stroke={C.textWhite} strokeWidth="1.3" strokeLinecap="round" /><line x1="10" y1="1" x2="10" y2="5" stroke={C.textWhite} strokeWidth="1.3" strokeLinecap="round" /></svg>
-                <span style={{ fontSize: 10, fontWeight: 800, fontFamily: FONT, color: C.textWhite, letterSpacing: 0.5 }}>{weekFilter ? 'THIS WEEK' : 'ALL TASKS'}</span>
-              </div>
-              {weekFilter && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {[['l', 'M10 4l-4 4 4 4'], ['r', 'M6 4l4 4-4 4']].map(([dir, path]) => (
-                    <div key={dir} onClick={() => setWeekOffset(w => dir === 'l' ? w - 1 : w + 1)} style={{ width: 26, height: 26, borderRadius: 6, cursor: 'pointer', background: C.border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
-                      onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
-                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d={path} stroke={C.textWhite} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                    </div>
-                  ))}
-                  <span style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, color: C.textWhite }}>{weekLabel.toUpperCase()}</span>
-                  {weekOffset !== 0 && <div onClick={() => setWeekOffset(0)} style={{ fontSize: 9, fontWeight: 800, fontFamily: FONT, color: C.textWhite, cursor: 'pointer', padding: '3px 8px', borderRadius: 5, background: C.borderHover, letterSpacing: 1 }}>TODAY</div>}
-                  <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
-                    {weekDays.map(day => (
-                      <div key={day.date} style={{ minWidth: 32, height: 32, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: day.date === today ? C.accent : C.border }}>
-                        <span style={{ fontSize: 6, fontWeight: 800, fontFamily: FONT, color: day.date === today ? C.textWhite : C.textMuted, letterSpacing: 0.5 }}>{day.full.slice(0, 2)}</span>
-                        <span style={{ fontSize: 12, fontWeight: 900, fontFamily: FONT, color: C.textWhite }}>{day.dayNum}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+            {/* Week filter (board only) */}
+            {view === 'board' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div onClick={() => setWeekFilter(!weekFilter)} style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: weekFilter ? C.accent : C.border, borderRadius: 8, padding: '6px 12px', transition: 'background .15s' }}>
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke={C.textWhite} strokeWidth="1.3" /><line x1="2" y1="7" x2="14" y2="7" stroke={C.textWhite} strokeWidth="1.3" /><line x1="6" y1="1" x2="6" y2="5" stroke={C.textWhite} strokeWidth="1.3" strokeLinecap="round" /><line x1="10" y1="1" x2="10" y2="5" stroke={C.textWhite} strokeWidth="1.3" strokeLinecap="round" /></svg>
+                  <span style={{ fontSize: 10, fontWeight: 800, fontFamily: FONT, color: C.textWhite, letterSpacing: 0.5 }}>{weekFilter ? 'THIS WEEK' : 'ALL TASKS'}</span>
+                </div>
+                {weekFilter && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {[['l', 'M10 4l-4 4 4 4'], ['r', 'M6 4l4 4-4 4']].map(([dir, path]) => (
+                      <div key={dir} onClick={() => setWeekOffset(w => dir === 'l' ? w - 1 : w + 1)} style={{ width: 26, height: 26, borderRadius: 6, cursor: 'pointer', background: C.border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
+                        onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d={path} stroke={C.textWhite} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       </div>
+                    ))}
+                    <span style={{ fontSize: 11, fontWeight: 800, fontFamily: FONT, color: C.textWhite }}>{weekLabel.toUpperCase()}</span>
+                    {weekOffset !== 0 && <div onClick={() => setWeekOffset(0)} style={{ fontSize: 9, fontWeight: 800, fontFamily: FONT, color: C.textWhite, cursor: 'pointer', padding: '3px 8px', borderRadius: 5, background: C.borderHover, letterSpacing: 1 }}>TODAY</div>}
+                    <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
+                      {weekDays.map(day => (
+                        <div key={day.date} style={{ minWidth: 32, height: 32, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: day.date === today ? C.accent : C.border }}>
+                          <span style={{ fontSize: 6, fontWeight: 800, fontFamily: FONT, color: day.date === today ? C.textWhite : C.textMuted, letterSpacing: 0.5 }}>{day.full.slice(0, 2)}</span>
+                          <span style={{ fontSize: 12, fontWeight: 900, fontFamily: FONT, color: C.textWhite }}>{day.dayNum}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Board options menu */}
+            <button ref={boardMenuBtnRef} onClick={() => setShowBoardMenu(v => !v)} aria-label="Board options" aria-haspopup="true" aria-expanded={showBoardMenu}
+              style={{ width: 32, height: 32, borderRadius: 8, background: C.border, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.4" fill={C.textWhite} /><circle cx="8" cy="8" r="1.4" fill={C.textWhite} /><circle cx="13" cy="8" r="1.4" fill={C.textWhite} /></svg>
+            </button>
+
+            {showBoardMenu && (
+              <div ref={boardMenuRef} role="menu" aria-label="Board options" style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, zIndex: 10003, width: 230, background: '#2B2F34', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: FONT }}>
+                <div style={{ padding: '14px 14px 10px', borderBottom: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.textWhite }}>Board settings</span>
+                </div>
+                <div style={{ padding: '12px 14px 14px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 0.8, marginBottom: 8 }}>BOARD LAYOUT</div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                    {[['classic', 'Classic'], ['compact', 'Compact']].map(([val, label]) => (
+                      <button key={val} onClick={() => updateSettings({ layoutMode: val })} style={{
+                        flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: FONT,
+                        background: layoutMode === val ? C.accent : C.overlayW10, color: C.textWhite, transition: 'background .15s',
+                      }}>{label}</button>
+                    ))}
+                  </div>
+                  {layoutMode === 'compact' && (
+                    <>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 0.8, marginBottom: 8 }}>LIST SIZE</div>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                        {['compact', 'normal', 'wide'].map(sz => (
+                          <button key={sz} onClick={() => updateSettings({ listWidth: sz })} style={{
+                            flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, fontFamily: FONT, letterSpacing: 0.4,
+                            background: settings.listWidth === sz ? C.accent : C.overlayW10, color: C.textWhite, transition: 'background .15s',
+                          }}>{sz.toUpperCase()}</button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 0.8, marginBottom: 8 }}>NEW LIST COLOR</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[['gray', 'Gray'], ['cycle', 'Cycle colors']].map(([val, label]) => (
+                      <button key={val} onClick={() => updateSettings({ newListColorMode: val })} style={{
+                        flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: FONT,
+                        background: settings.newListColorMode === val ? C.accent : C.overlayW10, color: C.textWhite, transition: 'background .15s',
+                      }}>{label}</button>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </header>
 
         {/* ── Board grid ── */}
         {view === 'board' && (
-          <div style={{ padding: '32px 36px 40px' }}>
-            <div className="board-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, alignItems: 'start' }}
+          <div style={layoutMode === 'compact'
+            ? { flex: 1, overflow: 'auto', padding: '32px 36px 40px' }
+            : { padding: '32px 36px 40px' }}>
+            <div className="board-grid" style={layoutMode === 'compact'
+              ? { display: 'flex', gap: 16, alignItems: 'flex-start' }
+              : { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, alignItems: 'start' }}
               onDragOver={e => { if (e.dataTransfer.types.includes('listid')) e.preventDefault() }}
               onDrop={handleListDrop}>
               {filteredLists.map((list, idx) => (
                 <Fragment key={list.id}>
                   {dropIndex === idx && dragListId && list.id !== dragListId && (
-                    <div style={{ borderRadius: R, minHeight: 160, background: 'rgba(255,255,255,0.05)' }} />
+                    <div style={{ borderRadius: R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
                   )}
                   <TaskList list={list}
+                    sizePreset={sizePreset}
+                    layoutMode={layoutMode}
                     onUpdate={u => updList(list.id, u)}
                     onDelete={() => delList(list.id)}
                     onCopy={() => {
@@ -2104,6 +2226,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                     onShiftClick={handleShiftClick}
                     requestAdd={requestAddInList}
                     onAddDone={() => setRequestAddInList(null)}
+                    requestRename={requestRenameList}
+                    onRenameDone={() => setRequestRenameList(null)}
                     boardLabels={boardLabels}
                     onCreateBoardLabel={createBoardLabel}
                     onUpdateBoardLabel={updateBoardLabel}
@@ -2111,9 +2235,9 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 </Fragment>
               ))}
               {dropIndex === filteredLists.length && dragListId && (
-                <div style={{ borderRadius: R, minHeight: 160, background: 'rgba(255,255,255,0.05)' }} />
+                <div style={{ borderRadius: R, minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}), background: 'rgba(255,255,255,0.05)' }} />
               )}
-              <button onClick={addList} style={{ border: `2px dashed ${C.overlayW15}`, background: 'transparent', borderRadius: R, padding: 32, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, color: C.overlayW30, letterSpacing: 1, transition: 'all .2s', minHeight: 160 }}
+              <button onClick={addList} style={{ border: `2px dashed ${C.overlayW15}`, background: 'transparent', borderRadius: R, padding: 32, fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, color: C.overlayW30, letterSpacing: 1, transition: 'all .2s', minHeight: 160, ...(layoutMode === 'compact' ? { width: sizePreset.width, flexShrink: 0 } : {}) }}
                 onMouseEnter={e => { e.target.style.borderColor = C.overlayW40; e.target.style.color = C.textWhite }}
                 onMouseLeave={e => { e.target.style.borderColor = C.overlayW15; e.target.style.color = C.overlayW30 }}>
                 + NEW LIST
