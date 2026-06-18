@@ -47,7 +47,7 @@ const PALETTE = [
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: #141517; }
+  html, body { height: 100%; background: #141517; overflow-x: hidden; max-width: 100vw; }
   body { font-family: 'Inter', sans-serif; }
   #root { width: 100% !important; max-width: 100% !important; margin: 0 !important;
           border: none !important; display: block !important; text-align: left !important; min-height: 100vh; }
@@ -123,7 +123,7 @@ function formatTime12(s) {
 }
 
 function newTask(text, dueDate = '') {
-  return { id: uid(), text, done: false, note: '', dueDate, startTime: '', endTime: '', labels: [], checklist: [] }
+  return { id: uid(), text, done: false, note: '', dueDate, startTime: '', endTime: '', labels: [], checklist: [], priority: null }
 }
 
 const DEFAULT_BOARD_LABELS = () => [
@@ -135,7 +135,7 @@ const DEFAULT_BOARD_LABELS = () => [
   { id: uid(), name: '', color: '#277da1' },
 ]
 
-const DEFAULT_BOARD_SETTINGS = () => ({ listWidth: 'normal', newListColorMode: 'cycle', layoutMode: 'classic' })
+const DEFAULT_BOARD_SETTINGS = () => ({ listWidth: 'normal', newListColorMode: 'cycle', layoutMode: 'classic', taskTextSize: 'medium' })
 
 const LIST_SIZE_PRESETS = {
   compact: { width: 220, titleSize: 15, headerPad: '10px 14px' },
@@ -143,8 +143,18 @@ const LIST_SIZE_PRESETS = {
   wide:    { width: 320, titleSize: 21, headerPad: '16px 20px' },
 }
 
+const TASK_TEXT_SIZE_PRESETS = {
+  small:  { title: 12, meta: 9 },
+  medium: { title: 14, meta: 11 },
+  large:  { title: 16, meta: 13 },
+}
+
+const DEFAULT_PRIORITY_COLORS = () => ({ low: '#90be6d', medium: '#277da1', high: '#f3722c', critical: '#f94144' })
+const PRIORITY_LEVEL_ORDER = ['low', 'medium', 'high', 'critical']
+const PRIORITY_LABELS = { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' }
+
 function newBoard(name, color = PALETTE[0]) {
-  return { id: uid(), name, color, lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS() }
+  return { id: uid(), name, color, lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(), priorityColors: DEFAULT_PRIORITY_COLORS() }
 }
 
 const PRIORITY_LEVELS = [
@@ -161,14 +171,14 @@ const PRIORITY_LEVELS = [
 
 function priorityTemplateBoard() {
   return {
-    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(),
+    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(), priorityColors: DEFAULT_PRIORITY_COLORS(),
     lists: PRIORITY_LEVELS.map(([name, color]) => ({ id: uid(), name, color, tasks: [] })),
   }
 }
 
 function templateBoard() {
   return {
-    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(),
+    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(), priorityColors: DEFAULT_PRIORITY_COLORS(),
     lists: [
       { id: uid(), name: 'TO DO', color: '#FF573B', tasks: [] },
       { id: uid(), name: 'IN PROGRESS', color: '#0988EF', tasks: [] },
@@ -186,6 +196,18 @@ function useClickOutside(ref, onClose) {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [])
+}
+
+const MOBILE_BREAKPOINT = 768
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
+    const h = e => setIsMobile(e.matches)
+    mq.addEventListener('change', h)
+    return () => mq.removeEventListener('change', h)
+  }, [])
+  return isMobile
 }
 
 /* ─── Editable ───────────────────────────────────────────────────────────────── */
@@ -448,12 +470,12 @@ function Confetti({ burst, onDone }) {
 }
 
 /* ─── DueBadge ───────────────────────────────────────────────────────────────── */
-function DueBadge({ date }) {
+function DueBadge({ date, fontSize = 9 }) {
   if (!date) return null
   const ov = isOverdue(date)
   return (
     <span style={{
-      fontSize: 9, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, padding: '3px 8px', borderRadius: 6,
+      fontSize, fontWeight: 800, fontFamily: FONT, letterSpacing: 1, padding: '3px 8px', borderRadius: 6,
       background: ov ? C.dangerBg : C.overlayW20, color: ov ? C.danger : C.textWhite,
     }}>{formatDate(date)}</span>
   )
@@ -564,13 +586,16 @@ function SideBtn({ label, icon, onClick }) {
   )
 }
 
-function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
+function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel, priorityColors, onUpdatePriorityColor }) {
   const ref = useRef(null)
   const itemRef = useRef(null)
   const [newItem, setNewItem] = useState('')
   const [editingDesc, setEditingDesc] = useState(false)
   const [labelPickerOpen, setLabelPickerOpen] = useState(false)
+  const [editingPriorityColor, setEditingPriorityColor] = useState(null)
+  const isMobile = useIsMobile()
   const lc = listColor || C.accent
+  const pc = priorityColors || DEFAULT_PRIORITY_COLORS()
   const cl = task.checklist || []
   const clDone = cl.filter(c => c.done).length
 
@@ -586,8 +611,8 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="tp-title"
-      style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 40, overflowY: 'auto' }}>
-      <div ref={ref} style={{ background: '#23272A', borderRadius: 12, width: '100%', maxWidth: 700, margin: '0 12px 60px', fontFamily: FONT, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: isMobile ? 16 : 40, overflowY: 'auto' }}>
+      <div ref={ref} style={{ background: '#23272A', borderRadius: 12, width: '100%', maxWidth: 700, margin: isMobile ? '0 8px 24px' : '0 12px 60px', boxSizing: 'border-box', fontFamily: FONT, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
         {/* Panel header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -619,7 +644,7 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
           </h2>
         </div>
 
-        <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 0 }}>
           {/* Main area */}
           <div style={{ flex: 1, padding: '16px 16px 24px', minWidth: 0 }}>
             {/* Action pills */}
@@ -728,7 +753,42 @@ function TaskPanel({ task, onUpdate, onDelete, onClose, listName, listColor, boa
           </div>
 
           {/* Sidebar */}
-          <div style={{ width: 190, padding: '16px 16px 24px 0', flexShrink: 0 }}>
+          <div style={{ width: isMobile ? '100%' : 190, padding: isMobile ? '0 16px 24px' : '16px 16px 24px 0', flexShrink: 0, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: 0.5 }}>Priority</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
+              {PRIORITY_LEVEL_ORDER.map(level => {
+                const active = task.priority === level
+                return (
+                  <div key={level} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => onUpdate({ ...task, priority: active ? null : level })}
+                      aria-pressed={active}
+                      style={{
+                        flex: 1, display: 'flex', alignItems: 'center', gap: 8, border: 'none', borderRadius: 6,
+                        padding: '7px 10px', cursor: 'pointer', fontFamily: FONT,
+                        background: active ? pc[level] : C.overlayW10,
+                        color: active ? 'rgba(0,0,0,0.75)' : C.textWhite,
+                        fontSize: 12, fontWeight: 700, textAlign: 'left',
+                      }}>
+                      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: pc[level], flexShrink: 0, boxShadow: active ? 'none' : `0 0 0 1px ${C.overlayW40}` }} />
+                      {PRIORITY_LABELS[level]}
+                    </button>
+                    <button onClick={() => setEditingPriorityColor(p => p === level ? null : level)}
+                      aria-label={`Customize ${PRIORITY_LABELS[level]} color`}
+                      style={{ width: 22, height: 22, flexShrink: 0, border: 'none', borderRadius: 5, background: C.overlayW10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M11.5 2.5l2 2-8 8H3.5v-2l8-8z" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </button>
+                    {editingPriorityColor === level && (
+                      <ColorPicker colors={PALETTE} current={pc[level]}
+                        onPick={c => onUpdatePriorityColor?.(level, c)}
+                        onClose={() => setEditingPriorityColor(null)} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
             <div style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, letterSpacing: 0.5, marginBottom: 8 }}>Due date</div>
             <input type="date" value={task.dueDate || ''}
               onChange={e => onUpdate({ ...task, dueDate: e.target.value })}
@@ -768,7 +828,10 @@ function QItem({ label, color, onClick }) {
 
 function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
   isFocused, isSelected, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick,
-  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
+  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel,
+  textSize, priorityColors }) {
+  const ts = textSize || TASK_TEXT_SIZE_PRESETS.medium
+  const pc = priorityColors || DEFAULT_PRIORITY_COLORS()
   const [burst, setBurst] = useState(null)
   const [qView, setQView] = useState('main') // 'main' | 'labels'
   const [quickEdit, setQuickEdit] = useState(false)
@@ -896,7 +959,7 @@ function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
               }}>
               {task.done && <svg width="9" height="9" viewBox="0 0 12 12" className={burst ? 'check-bounce' : ''}><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
             </div>
-            <div className="task-text" style={{ flex: 1, fontSize: 14, fontWeight: 600, color: C.textWhite, lineHeight: 1.5 }}>
+            <div className="task-text" style={{ flex: 1, fontSize: ts.title, fontWeight: 600, color: C.textWhite, lineHeight: 1.5 }}>
               {task.text}
             </div>
             <div onClick={e => { e.stopPropagation(); openQuickEdit() }} className="chk-tr" style={{
@@ -911,6 +974,14 @@ function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
 
         {/* Badges row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Priority */}
+          {task.priority && (
+            <span style={{
+              fontSize: ts.meta, fontWeight: 800, fontFamily: FONT, letterSpacing: 0.6, textTransform: 'uppercase',
+              padding: '3px 8px', borderRadius: 6, background: pc[task.priority], color: 'rgba(0,0,0,0.7)',
+            }}>{PRIORITY_LABELS[task.priority]}</span>
+          )}
+
           {/* Checklist */}
           {cl.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -918,12 +989,12 @@ function TaskCard({ task, listId, listColor, onToggle, onUpdate, onDelete,
                 <rect x="2" y="2" width="12" height="12" rx="2.5" stroke={clDone === cl.length ? '#43aa8b' : C.textMuted} strokeWidth="1.4" />
                 {clDone === cl.length && <path d="M4.5 8l3 3 4-5" stroke="#43aa8b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />}
               </svg>
-              <span style={{ fontSize: 11, fontWeight: 700, color: clDone === cl.length ? '#43aa8b' : C.textMuted, fontFamily: FONT, letterSpacing: 0.2 }}>{clDone}/{cl.length}</span>
+              <span style={{ fontSize: ts.meta, fontWeight: 700, color: clDone === cl.length ? '#43aa8b' : C.textMuted, fontFamily: FONT, letterSpacing: 0.2 }}>{clDone}/{cl.length}</span>
             </div>
           )}
 
           {/* Due date */}
-          {task.dueDate && <DueBadge date={task.dueDate} />}
+          {task.dueDate && <DueBadge date={task.dueDate} fontSize={ts.meta} />}
 
           {/* Note indicator */}
           {task.note && (
@@ -994,7 +1065,8 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
   taskDrop, onTaskDragOver, onTaskDrop, isDragging, onListDragStart, onListDragOver, onListDrop, onListDragEnd,
   focusedCard, selectedCards, focusedAction, onActionDone, onOpenPanel, onFocusCard, onShiftClick, requestAdd, onAddDone,
   requestRename, onRenameDone, sizePreset, layoutMode,
-  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel }) {
+  boardLabels, onCreateBoardLabel, onUpdateBoardLabel, onDeleteBoardLabel,
+  textSize, priorityColors, onUpdatePriorityColor }) {
   const preset = sizePreset || LIST_SIZE_PRESETS.normal
   const isClassic = layoutMode === 'classic'
   const isGray = list.color === C.borderHover
@@ -1149,7 +1221,10 @@ function TaskList({ list, onUpdate, onDelete, onCopy, onMoveLeft, onMoveRight, c
                   boardLabels={boardLabels}
                   onCreateBoardLabel={onCreateBoardLabel}
                   onUpdateBoardLabel={onUpdateBoardLabel}
-                  onDeleteBoardLabel={onDeleteBoardLabel} />
+                  onDeleteBoardLabel={onDeleteBoardLabel}
+                  textSize={textSize}
+                  priorityColors={priorityColors}
+                  onUpdatePriorityColor={onUpdatePriorityColor} />
               </li>
             </Fragment>
           ))}
@@ -1692,6 +1767,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(board.name)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const isMobile = useIsMobile()
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const navCollapsed = !isMobile && sidebarCollapsed
+  const closeMobileSidebar = () => { if (isMobile) setMobileSidebarOpen(false) }
   const newInputRef = useRef(null)
 
   // ── Keyboard / selection state ──
@@ -1731,7 +1810,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const settings = board.settings || DEFAULT_BOARD_SETTINGS()
   const sizePreset = LIST_SIZE_PRESETS[settings.listWidth] || LIST_SIZE_PRESETS.normal
   const layoutMode = settings.layoutMode || 'classic'
+  const textSize = TASK_TEXT_SIZE_PRESETS[settings.taskTextSize] || TASK_TEXT_SIZE_PRESETS.medium
   const updateSettings = patch => boardUpdate({ ...board, settings: { ...settings, ...patch } })
+  const priorityColors = board.priorityColors || DEFAULT_PRIORITY_COLORS()
+  const updatePriorityColor = (level, color) => boardUpdate({ ...board, priorityColors: { ...priorityColors, [level]: color } })
 
   // Wrap onUpdate with undo history tracking
   const boardUpdate = updatedBoard => {
@@ -1983,47 +2065,64 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
 
       {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-      <nav aria-label="Application navigation" style={{ width: sidebarCollapsed ? 64 : 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', transition: 'width 260ms cubic-bezier(.4,0,.2,1)' }}>
+      {isMobile && mobileSidebarOpen && (
+        <div onClick={closeMobileSidebar} aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10009 }} />
+      )}
+      <nav aria-label="Application navigation" style={isMobile ? {
+        width: 240, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column',
+        position: 'fixed', top: 0, left: 0, height: '100vh', overflow: 'hidden', zIndex: 10010,
+        transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 260ms cubic-bezier(.4,0,.2,1)',
+      } : { width: sidebarCollapsed ? 64 : 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', transition: 'width 260ms cubic-bezier(.4,0,.2,1)' }}>
 
         {/* Branding */}
-        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', padding: '0 18px', gap: 10, flexShrink: 0, overflow: 'hidden' }}>
-          <img src="/favicon.svg" alt="PLANNA" width={28} height={28} style={{ borderRadius: 6, flexShrink: 0 }} />
-          <strong style={{
-            fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT,
-            whiteSpace: 'nowrap', overflow: 'hidden', display: 'inline-block', flexShrink: 0,
-            opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 90,
-            transition: 'opacity 260ms cubic-bezier(.4,0,.2,1), width 260ms cubic-bezier(.4,0,.2,1)',
-          }}>PLANNA</strong>
+        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', gap: 10, flexShrink: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <img src="/favicon.svg" alt="PLANNA" width={28} height={28} style={{ borderRadius: 6, flexShrink: 0 }} />
+            <strong style={{
+              fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT,
+              whiteSpace: 'nowrap', overflow: 'hidden', display: 'inline-block', flexShrink: 0,
+              opacity: navCollapsed ? 0 : 1, width: navCollapsed ? 0 : 90,
+              transition: 'opacity 260ms cubic-bezier(.4,0,.2,1), width 260ms cubic-bezier(.4,0,.2,1)',
+            }}>PLANNA</strong>
+          </div>
+          {isMobile && (
+            <button onClick={closeMobileSidebar} aria-label="Close sidebar"
+              style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMuted }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" /></svg>
+            </button>
+          )}
         </div>
 
-        {/* Collapse toggle */}
-        <button onClick={() => setSidebarCollapsed(v => !v)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-end', gap: 6, padding: sidebarCollapsed ? '6px 0' : '6px 16px', margin: '0 0 8px', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, opacity: 0.55, transition: 'opacity .15s' }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = '0.55' }}
-          onFocus={e => { e.currentTarget.style.opacity = '1' }}
-          onBlur={e => { e.currentTarget.style.opacity = '0.55' }}>
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 200ms cubic-bezier(.4,0,.2,1)' }}>
-            <path d="M10 3l-5 5 5 5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        {/* Collapse toggle (desktop only) */}
+        {!isMobile && (
+          <button onClick={() => setSidebarCollapsed(v => !v)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-end', gap: 6, padding: sidebarCollapsed ? '6px 0' : '6px 16px', margin: '0 0 8px', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, opacity: 0.55, transition: 'opacity .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '0.55' }}
+            onFocus={e => { e.currentTarget.style.opacity = '1' }}
+            onBlur={e => { e.currentTarget.style.opacity = '0.55' }}>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 200ms cubic-bezier(.4,0,.2,1)' }}>
+              <path d="M10 3l-5 5 5 5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
 
         <div style={{ height: 1, background: C.border, margin: '0 16px 12px' }} aria-hidden="true" />
 
         {/* View nav */}
-        <div style={{ padding: sidebarCollapsed ? '0 8px 8px' : '0 8px 8px' }} role="group" aria-label="Views">
-          <NavItem label="DAY" active={view === 'day'} onClick={() => setView('day')} collapsed={sidebarCollapsed}
+        <div style={{ padding: '0 8px 8px' }} role="group" aria-label="Views">
+          <NavItem label="DAY" active={view === 'day'} onClick={() => { setView('day'); closeMobileSidebar() }} collapsed={navCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="8" y1="4" x2="8" y2="8" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="8" y1="8" x2="11" y2="10" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>}
           />
-          <NavItem label="BOARD" active={view === 'board'} onClick={() => setView('board')} collapsed={sidebarCollapsed}
+          <NavItem label="BOARD" active={view === 'board'} onClick={() => { setView('board'); closeMobileSidebar() }} collapsed={navCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1" y="1" width="6" height="9" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><rect x="9" y="1" width="6" height="5" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><rect x="9" y="8" width="6" height="7" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /></svg>}
           />
-          <NavItem label="AGENDA" active={view === 'agenda'} onClick={() => setView('agenda')} collapsed={sidebarCollapsed}
+          <NavItem label="AGENDA" active={view === 'agenda'} onClick={() => { setView('agenda'); closeMobileSidebar() }} collapsed={navCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="2" y1="6" x2="14" y2="6" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="6" y1="2" x2="6" y2="6" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /></svg>}
           />
         </div>
 
-        {!sidebarCollapsed && (
+        {!navCollapsed && (
           <>
             <div style={{ height: 1, background: C.border, margin: '4px 16px 16px' }} aria-hidden="true" />
 
@@ -2036,8 +2135,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: b.id === board.id ? C.border : 'transparent', marginBottom: 2, transition: 'background .15s' }}
                       role="button" tabIndex={0}
                       aria-current={b.id === board.id ? 'page' : undefined}
-                      onClick={() => onSwitchBoard(b.id)}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitchBoard(b.id) } }}
+                      onClick={() => { onSwitchBoard(b.id); closeMobileSidebar() }}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitchBoard(b.id); closeMobileSidebar() } }}
                       onMouseEnter={e => { if (b.id !== board.id) e.currentTarget.style.background = C.overlayW10 }}
                       onMouseLeave={e => { if (b.id !== board.id) e.currentTarget.style.background = 'transparent' }}>
                       <div style={{ width: 8, height: 8, borderRadius: 3, background: b.color, flexShrink: 0 }} aria-hidden="true" />
@@ -2066,10 +2165,30 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
           </>
         )}
 
-        {sidebarCollapsed && (
+        {navCollapsed && (
           <>
-            <div style={{ flex: 1, minHeight: 0 }} />
-            <div style={{ padding: '0 0 20px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ height: 1, background: C.border, margin: '4px 16px 12px' }} aria-hidden="true" />
+            <div role="list" aria-label="Boards" style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0 0 8px' }}>
+              {boards.map(b => {
+                const active = b.id === board.id
+                return (
+                  <button key={b.id} role="listitem" onClick={() => onSwitchBoard(b.id)}
+                    aria-label={`Switch to board ${b.name}`} aria-current={active ? 'page' : undefined} title={b.name}
+                    style={{
+                      width: 28, height: 28, flexShrink: 0, borderRadius: 8, cursor: 'pointer', padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: active ? C.border : 'transparent',
+                      border: active ? `2px solid ${b.color}` : '2px solid transparent',
+                      transition: 'background .15s, border-color .15s',
+                    }}
+                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.overlayW10 }}
+                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+                    <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: b.color, flexShrink: 0 }} />
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ padding: '8px 0 20px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
               <button onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
                 style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
             </div>
@@ -2081,8 +2200,14 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
       <main style={{ flex: 1, overflow: (view === 'agenda' || (view === 'board' && layoutMode === 'compact')) ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', height: '100vh' }}>
 
         {/* ── Top bar ── */}
-        <header className="top-bar" style={{ minHeight: 72, padding: '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <header className="top-bar" style={{ minHeight: 72, padding: isMobile ? '0 12px' : '0 36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            {isMobile && (
+              <button onClick={() => setMobileSidebarOpen(true)} aria-label="Open sidebar"
+                style={{ width: 36, height: 36, flexShrink: 0, border: 'none', background: 'transparent', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true"><line x1="2" y1="4" x2="14" y2="4" stroke={C.textWhite} strokeWidth="1.5" strokeLinecap="round" /><line x1="2" y1="8" x2="14" y2="8" stroke={C.textWhite} strokeWidth="1.5" strokeLinecap="round" /><line x1="2" y1="12" x2="14" y2="12" stroke={C.textWhite} strokeWidth="1.5" strokeLinecap="round" /></svg>
+              </button>
+            )}
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowBoardColorPicker(v => !v)} aria-label="Change board color" aria-haspopup="true" aria-expanded={showBoardColorPicker}
                 style={{ width: 10, height: 10, borderRadius: 3, background: board.color, border: 'none', padding: 0, cursor: 'pointer' }} />
@@ -2100,7 +2225,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: C.textWhite }}
               />
             ) : (
-              <h1 className="renameable" onClick={() => setEditingTitle(true)} style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text' }}>{board.name}</h1>
+              <h1 className="renameable" onClick={() => setEditingTitle(true)} style={{ fontSize: isMobile ? 18 : 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{board.name}</h1>
             )}
           </div>
 
@@ -2173,12 +2298,21 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                     </>
                   )}
                   <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 0.8, marginBottom: 8 }}>NEW LIST COLOR</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
                     {[['gray', 'Gray'], ['cycle', 'Cycle colors']].map(([val, label]) => (
                       <button key={val} onClick={() => updateSettings({ newListColorMode: val })} style={{
                         flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: FONT,
                         background: settings.newListColorMode === val ? C.accent : C.overlayW10, color: C.textWhite, transition: 'background .15s',
                       }}>{label}</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: C.textMuted, letterSpacing: 0.8, marginBottom: 8 }}>TASK CARD TEXT SIZE</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {['small', 'medium', 'large'].map(sz => (
+                      <button key={sz} onClick={() => updateSettings({ taskTextSize: sz })} style={{
+                        flex: 1, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 800, fontFamily: FONT, letterSpacing: 0.4, textTransform: 'uppercase',
+                        background: (settings.taskTextSize || 'medium') === sz ? C.accent : C.overlayW10, color: C.textWhite, transition: 'background .15s',
+                      }}>{sz}</button>
                     ))}
                   </div>
                 </div>
@@ -2190,11 +2324,11 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
         {/* ── Board grid ── */}
         {view === 'board' && (
           <div style={layoutMode === 'compact'
-            ? { flex: 1, overflow: 'auto', padding: '32px 36px 40px' }
-            : { padding: '32px 36px 40px' }}>
+            ? { flex: 1, overflow: 'auto', padding: isMobile ? '16px 12px 24px' : '32px 36px 40px' }
+            : { padding: isMobile ? '16px 12px 24px' : '32px 36px 40px' }}>
             <div className="board-grid" style={layoutMode === 'compact'
               ? { display: 'flex', gap: 16, alignItems: 'flex-start' }
-              : { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, alignItems: 'start' }}
+              : { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 16, alignItems: 'start' }}
               onDragOver={e => { if (e.dataTransfer.types.includes('listid')) e.preventDefault() }}
               onDrop={handleListDrop}>
               {filteredLists.map((list, idx) => (
@@ -2244,7 +2378,10 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                     boardLabels={boardLabels}
                     onCreateBoardLabel={createBoardLabel}
                     onUpdateBoardLabel={updateBoardLabel}
-                    onDeleteBoardLabel={deleteBoardLabel} />
+                    onDeleteBoardLabel={deleteBoardLabel}
+                    textSize={textSize}
+                    priorityColors={priorityColors}
+                    onUpdatePriorityColor={updatePriorityColor} />
                 </Fragment>
               ))}
               {dropIndex === filteredLists.length && dragListId && (
@@ -2287,6 +2424,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
           onCreateBoardLabel={createBoardLabel}
           onUpdateBoardLabel={updateBoardLabel}
           onDeleteBoardLabel={deleteBoardLabel}
+          priorityColors={priorityColors}
+          onUpdatePriorityColor={updatePriorityColor}
         />
       )}
     </div>
@@ -2354,7 +2493,7 @@ export default function App() {
       <>
         <style>{GLOBAL_CSS}</style>
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', maxWidth: 360, padding: 20 }}>
+          <div style={{ textAlign: 'center', width: '100%', maxWidth: 480, padding: 20, boxSizing: 'border-box' }}>
             <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLANNA</div>
             <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 32 }}>Create your first board to get started</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
