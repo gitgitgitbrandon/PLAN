@@ -143,8 +143,8 @@ const LIST_SIZE_PRESETS = {
   wide:    { width: 320, titleSize: 21, headerPad: '16px 20px' },
 }
 
-function newBoard(name) {
-  return { id: uid(), name, color: PALETTE[0], lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS() }
+function newBoard(name, color = PALETTE[0]) {
+  return { id: uid(), name, color, lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS() }
 }
 
 function templateBoard() {
@@ -1643,16 +1643,18 @@ function DayView({ lists, onToggleTask, onToggleChecklist }) {
 }
 
 /* ─── BoardDetail ────────────────────────────────────────────────────────────── */
-function NavItem({ label, icon, active, onClick }) {
+function NavItem({ label, icon, active, onClick, collapsed }) {
   return (
     <div role="button" tabIndex={0} onClick={onClick}
       aria-current={active ? 'page' : undefined}
+      aria-label={collapsed ? label : undefined}
+      title={collapsed ? label : undefined}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2 }}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: 10, padding: collapsed ? '9px 0' : '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2 }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.overlayW10 }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
       {icon}
-      <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT }}>{label}</span>
+      {!collapsed && <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT }}>{label}</span>}
     </div>
   )
 }
@@ -1665,6 +1667,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
   const [weekOffset, setWeekOffset] = useState(0)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(board.name)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const newInputRef = useRef(null)
 
   // ── Keyboard / selection state ──
@@ -1956,66 +1959,83 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
 
       {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-      <nav aria-label="Application navigation" style={{ width: 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
+      <nav aria-label="Application navigation" style={{ width: sidebarCollapsed ? 64 : 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', transition: 'width 200ms cubic-bezier(.4,0,.2,1)' }}>
 
         {/* Branding */}
-        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', padding: '0 16px', flexShrink: 0 }}>
-          <strong style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT }}>PLANNA</strong>
+        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? 0 : '0 16px', gap: 10, flexShrink: 0 }}>
+          <img src="/favicon.svg" alt="PLANNA" width={28} height={28} style={{ borderRadius: 6, flexShrink: 0 }} />
+          {!sidebarCollapsed && <strong style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden' }}>PLANNA</strong>}
         </div>
+
+        {/* Collapse toggle */}
+        <button onClick={() => setSidebarCollapsed(v => !v)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-end', gap: 6, padding: sidebarCollapsed ? '6px 0' : '6px 16px', margin: '0 0 8px', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, opacity: 0.55, transition: 'opacity .15s' }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '1' }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '0.55' }}
+          onFocus={e => { e.currentTarget.style.opacity = '1' }}
+          onBlur={e => { e.currentTarget.style.opacity = '0.55' }}>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 200ms cubic-bezier(.4,0,.2,1)' }}>
+            <path d="M10 3l-5 5 5 5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
 
         <div style={{ height: 1, background: C.border, margin: '0 16px 12px' }} aria-hidden="true" />
 
         {/* View nav */}
-        <div style={{ padding: '0 8px 8px' }} role="group" aria-label="Views">
-          <NavItem label="DAY" active={view === 'day'} onClick={() => setView('day')}
+        <div style={{ padding: sidebarCollapsed ? '0 8px 8px' : '0 8px 8px' }} role="group" aria-label="Views">
+          <NavItem label="DAY" active={view === 'day'} onClick={() => setView('day')} collapsed={sidebarCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="8" y1="4" x2="8" y2="8" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" strokeLinecap="round" /><line x1="8" y1="8" x2="11" y2="10" stroke={view === 'day' ? C.textWhite : C.textMuted} strokeWidth="1.3" strokeLinecap="round" /></svg>}
           />
-          <NavItem label="BOARD" active={view === 'board'} onClick={() => setView('board')}
+          <NavItem label="BOARD" active={view === 'board'} onClick={() => setView('board')} collapsed={sidebarCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1" y="1" width="6" height="9" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><rect x="9" y="1" width="6" height="5" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><rect x="9" y="8" width="6" height="7" rx="1.5" stroke={view === 'board' ? C.textWhite : C.textMuted} strokeWidth="1.3" /></svg>}
           />
-          <NavItem label="AGENDA" active={view === 'agenda'} onClick={() => setView('agenda')}
+          <NavItem label="AGENDA" active={view === 'agenda'} onClick={() => setView('agenda')} collapsed={sidebarCollapsed}
             icon={<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="2" y1="6" x2="14" y2="6" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /><line x1="6" y1="2" x2="6" y2="6" stroke={view === 'agenda' ? C.textWhite : C.textMuted} strokeWidth="1.3" /></svg>}
           />
         </div>
 
-        <div style={{ height: 1, background: C.border, margin: '4px 16px 16px' }} aria-hidden="true" />
+        {!sidebarCollapsed && (
+          <>
+            <div style={{ height: 1, background: C.border, margin: '4px 16px 16px' }} aria-hidden="true" />
 
-        {/* Boards list */}
-        <div style={{ padding: '0 8px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          <p style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1.5, padding: '0 8px 8px', fontFamily: FONT, margin: 0 }}>BOARDS</p>
-          <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {boards.map(b => (
-              <li key={b.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: b.id === board.id ? C.border : 'transparent', marginBottom: 2, transition: 'background .15s' }}
-                  role="button" tabIndex={0}
-                  aria-current={b.id === board.id ? 'page' : undefined}
-                  onClick={() => onSwitchBoard(b.id)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitchBoard(b.id) } }}
-                  onMouseEnter={e => { if (b.id !== board.id) e.currentTarget.style.background = C.overlayW10 }}
-                  onMouseLeave={e => { if (b.id !== board.id) e.currentTarget.style.background = 'transparent' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 3, background: b.color, flexShrink: 0 }} aria-hidden="true" />
-                  <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: b.id === board.id ? C.textWhite : C.textMuted, fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
-                  <button onClick={e => { e.stopPropagation(); onDeleteBoard(b.id) }}
-                    aria-label={`Delete board ${b.name}`}
-                    style={{ width: 16, height: 16, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12, color: C.textMuted, fontWeight: 700, flexShrink: 0, background: 'transparent', border: 'none', transition: 'color .15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = C.danger }}
-                    onMouseLeave={e => { e.currentTarget.style.color = C.textMuted }}>×</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+            {/* Boards list */}
+            <div style={{ padding: '0 8px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+              <p style={{ fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1.5, padding: '0 8px 8px', fontFamily: FONT, margin: 0 }}>BOARDS</p>
+              <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {boards.map(b => (
+                  <li key={b.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: b.id === board.id ? C.border : 'transparent', marginBottom: 2, transition: 'background .15s' }}
+                      role="button" tabIndex={0}
+                      aria-current={b.id === board.id ? 'page' : undefined}
+                      onClick={() => onSwitchBoard(b.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitchBoard(b.id) } }}
+                      onMouseEnter={e => { if (b.id !== board.id) e.currentTarget.style.background = C.overlayW10 }}
+                      onMouseLeave={e => { if (b.id !== board.id) e.currentTarget.style.background = 'transparent' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 3, background: b.color, flexShrink: 0 }} aria-hidden="true" />
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: b.id === board.id ? C.textWhite : C.textMuted, fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
+                      <button onClick={e => { e.stopPropagation(); onDeleteBoard(b.id) }}
+                        aria-label={`Delete board ${b.name}`}
+                        style={{ width: 16, height: 16, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 12, color: C.textMuted, fontWeight: 700, flexShrink: 0, background: 'transparent', border: 'none', transition: 'color .15s' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = C.danger }}
+                        onMouseLeave={e => { e.currentTarget.style.color = C.textMuted }}>×</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-        {/* New board input */}
-        <div style={{ padding: '12px 16px 24px', borderTop: `1px solid ${C.border}`, marginTop: 8 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input ref={newInputRef} value={newName} onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setNewName('') }}
-              placeholder="New board…" aria-label="New board name"
-              style={{ flex: 1, border: 'none', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
-            <button onClick={handleCreate} aria-label="Create board" style={{ border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, padding: '0 10px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>+</button>
-          </div>
-        </div>
+            {/* New board input */}
+            <div style={{ padding: '12px 12px 20px', borderTop: `1px solid ${C.border}`, marginTop: 8, flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input ref={newInputRef} value={newName} onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setNewName('') }}
+                  placeholder="New board…" aria-label="New board name"
+                  style={{ flex: 1, minWidth: 0, height: 32, boxSizing: 'border-box', border: 'none', borderRadius: 8, padding: '0 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
+                <button onClick={handleCreate} aria-label="Create board" style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+              </div>
+            </div>
+          </>
+        )}
       </nav>
 
       {/* ════════════════ MAIN CONTENT ════════════════ */}
@@ -2271,7 +2291,7 @@ export default function App() {
   }, [activeBoardId])
 
   const createBoard = name => {
-    const b = newBoard(name)
+    const b = newBoard(name, PALETTE[boards.length % PALETTE.length])
     setBoards(p => [...p, b])
     setActiveBoardId(b.id)
     setNewBoardName('')
