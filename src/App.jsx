@@ -147,6 +147,25 @@ function newBoard(name, color = PALETTE[0]) {
   return { id: uid(), name, color, lists: [], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS() }
 }
 
+const PRIORITY_LEVELS = [
+  ['CRITICAL', '#f94144'],
+  ['HIGH', '#f3722c'],
+  ['MEDIUM-HIGH', '#f8961e'],
+  ['MEDIUM', '#f9844a'],
+  ['MEDIUM-LOW', '#f9c74f'],
+  ['LOW', '#90be6d'],
+  ['MINIMAL', '#43aa8b'],
+  ['BACKLOG', '#4d908e'],
+  ['ICEBOX', '#577590'],
+]
+
+function priorityTemplateBoard() {
+  return {
+    id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(),
+    lists: PRIORITY_LEVELS.map(([name, color]) => ({ id: uid(), name, color, tasks: [] })),
+  }
+}
+
 function templateBoard() {
   return {
     id: uid(), name: 'MY BOARD', color: PALETTE[0], dayTags: {}, boardLabels: DEFAULT_BOARD_LABELS(), settings: DEFAULT_BOARD_SETTINGS(),
@@ -1650,11 +1669,16 @@ function NavItem({ label, icon, active, onClick, collapsed }) {
       aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
-      style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: 10, padding: collapsed ? '9px 0' : '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, cursor: 'pointer', background: active ? C.border : 'transparent', transition: 'background .15s', marginBottom: 2, overflow: 'hidden' }}
       onMouseEnter={e => { if (!active) e.currentTarget.style.background = C.overlayW10 }}
       onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-      {icon}
-      {!collapsed && <span style={{ fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT }}>{label}</span>}
+      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{icon}</span>
+      <span style={{
+        fontSize: 11, fontWeight: 800, color: active ? C.textWhite : C.textMuted, letterSpacing: 0.8, fontFamily: FONT,
+        whiteSpace: 'nowrap', overflow: 'hidden', display: 'inline-block', flexShrink: 0,
+        opacity: collapsed ? 0 : 1, width: collapsed ? 0 : 70,
+        transition: 'opacity 260ms cubic-bezier(.4,0,.2,1), width 260ms cubic-bezier(.4,0,.2,1)',
+      }}>{label}</span>
     </div>
   )
 }
@@ -1959,12 +1983,17 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg, fontFamily: FONT }}>
 
       {/* ════════════════ LEFT SIDEBAR ════════════════ */}
-      <nav aria-label="Application navigation" style={{ width: sidebarCollapsed ? 64 : 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', transition: 'width 200ms cubic-bezier(.4,0,.2,1)' }}>
+      <nav aria-label="Application navigation" style={{ width: sidebarCollapsed ? 64 : 220, flexShrink: 0, background: '#191B1D', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden', transition: 'width 260ms cubic-bezier(.4,0,.2,1)' }}>
 
         {/* Branding */}
-        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? 0 : '0 16px', gap: 10, flexShrink: 0 }}>
+        <div style={{ minHeight: 72, display: 'flex', alignItems: 'center', padding: '0 18px', gap: 10, flexShrink: 0, overflow: 'hidden' }}>
           <img src="/favicon.svg" alt="PLANNA" width={28} height={28} style={{ borderRadius: 6, flexShrink: 0 }} />
-          {!sidebarCollapsed && <strong style={{ fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT, whiteSpace: 'nowrap', overflow: 'hidden' }}>PLANNA</strong>}
+          <strong style={{
+            fontSize: 18, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, fontFamily: FONT,
+            whiteSpace: 'nowrap', overflow: 'hidden', display: 'inline-block', flexShrink: 0,
+            opacity: sidebarCollapsed ? 0 : 1, width: sidebarCollapsed ? 0 : 90,
+            transition: 'opacity 260ms cubic-bezier(.4,0,.2,1), width 260ms cubic-bezier(.4,0,.2,1)',
+          }}>PLANNA</strong>
         </div>
 
         {/* Collapse toggle */}
@@ -2033,6 +2062,16 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                   style={{ flex: 1, minWidth: 0, height: 32, boxSizing: 'border-box', border: 'none', borderRadius: 8, padding: '0 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
                 <button onClick={handleCreate} aria-label="Create board" style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
               </div>
+            </div>
+          </>
+        )}
+
+        {sidebarCollapsed && (
+          <>
+            <div style={{ flex: 1, minHeight: 0 }} />
+            <div style={{ padding: '0 0 20px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+              <button onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
+                style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
             </div>
           </>
         )}
@@ -2325,14 +2364,24 @@ export default function App() {
                 style={{ flex: 1, border: 'none', borderRadius: R, padding: '16px 20px', fontSize: 16, fontFamily: FONT, fontWeight: 700, outline: 'none', background: C.border, color: C.textWhite }} />
               <button onClick={() => { if (newBoardName.trim()) createBoard(newBoardName.trim()) }} style={{ border: 'none', background: C.accent, color: C.textWhite, borderRadius: R, padding: '16px 28px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, letterSpacing: 0.5 }}>CREATE</button>
             </div>
-            <div style={{ paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 12, letterSpacing: 0.5 }}>OR START WITH A TEMPLATE</p>
+            <div style={{ paddingTop: 24, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 2, letterSpacing: 0.5 }}>OR START WITH A TEMPLATE</p>
               <div onClick={() => { const b = templateBoard(); setBoards([b]); setActiveBoardId(b.id) }} style={{ background: C.border, borderRadius: R - 4, padding: '16px 20px', cursor: 'pointer', transition: 'background .15s' }}
                 onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
                 onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
                 <div style={{ fontSize: 15, fontWeight: 800, color: C.textWhite, marginBottom: 8 }}>Kanban Board</div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {[['TO DO', '#FF573B'], ['IN PROGRESS', '#0988EF'], ['DONE', '#018848']].map(([l, c]) => (
+                    <span key={l} style={{ background: c, borderRadius: 4, padding: '3px 10px', fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>{l}</span>
+                  ))}
+                </div>
+              </div>
+              <div onClick={() => { const b = priorityTemplateBoard(); setBoards([b]); setActiveBoardId(b.id) }} style={{ background: C.border, borderRadius: R - 4, padding: '16px 20px', cursor: 'pointer', transition: 'background .15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
+                onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.textWhite, marginBottom: 8 }}>Priority Levels</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {PRIORITY_LEVELS.map(([l, c]) => (
                     <span key={l} style={{ background: c, borderRadius: 4, padding: '3px 10px', fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>{l}</span>
                   ))}
                 </div>
