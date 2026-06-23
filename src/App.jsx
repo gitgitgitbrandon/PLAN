@@ -55,7 +55,9 @@ const GLOBAL_CSS = `
   ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 4px; }
   input, textarea { caret-color: currentColor; }
   input:focus, textarea:focus { outline: none; }
+  input:focus-visible, textarea:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
   button { transition: transform 120ms cubic-bezier(.4,0,.2,1), opacity 120ms ease, background 150ms ease, filter 150ms ease; }
+  button:focus-visible { outline: 2px solid ${C.accent}; outline-offset: 2px; }
   button:active:not(:disabled) { transform: scale(0.94); filter: brightness(0.92); }
   .task-card:hover { border-color: ${C.hoverBlue} !important; }
   .task-card:hover .chk-tr { opacity: 1 !important; }
@@ -2159,7 +2161,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                   onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setNewName('') }}
                   placeholder="New board…" aria-label="New board name"
                   style={{ flex: 1, minWidth: 0, height: 32, boxSizing: 'border-box', border: 'none', borderRadius: 8, padding: '0 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
-                <button onClick={handleCreate} aria-label="Create board" style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+                <button type="button" onClick={handleCreate} aria-label="Create board" style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
               </div>
             </div>
           </>
@@ -2189,7 +2191,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               })}
             </div>
             <div style={{ padding: '8px 0 20px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-              <button onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
+              <button type="button" onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
                 style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
             </div>
           </>
@@ -2441,6 +2443,7 @@ export default function App() {
     return localStorage.getItem('planner-active') || null
   })
   const [newBoardName, setNewBoardName] = useState('')
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const h = e => {
@@ -2493,8 +2496,8 @@ export default function App() {
       <>
         <style>{GLOBAL_CSS}</style>
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', width: '100%', maxWidth: 480, padding: 20, boxSizing: 'border-box' }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLANNA</div>
+          <div style={{ textAlign: 'left', width: '100%', maxWidth: '100%', padding: 20, boxSizing: 'border-box' }}>
+            <div style={{ fontSize: isMobile ? 56 : 246, fontWeight: 900, color: C.textWhite, letterSpacing: -1, marginBottom: 8 }}>PLANNA</div>
             <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 32 }}>Create your first board to get started</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
               <input autoFocus value={newBoardName} onChange={e => setNewBoardName(e.target.value)}

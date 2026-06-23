@@ -36,7 +36,8 @@
       "Bash(break)",
       "Read(//tmp/**)",
       "Bash(curl -s http://localhost:5173/src/App.jsx)",
-      "Bash(curl -s http://localhost:5173/)"
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(awk 'NR<=2490 && /^function /{line=NR; name=$0} END{print line\": \"name}' src/App.jsx)"
     ]
   }
 }
