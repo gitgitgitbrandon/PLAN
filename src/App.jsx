@@ -2154,12 +2154,13 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
 
             {/* New board input */}
             <div style={{ padding: '12px 12px 20px', borderTop: `1px solid ${C.border}`, marginTop: 8, flexShrink: 0 }}>
+              <label htmlFor="new-board-input" style={{ display: 'block', fontSize: 9, fontWeight: 800, color: C.textMuted, letterSpacing: 1.5, fontFamily: FONT, marginBottom: 6 }}>NEW BOARD</label>
               <div style={{ display: 'flex', gap: 6 }}>
-                <input ref={newInputRef} value={newName} onChange={e => setNewName(e.target.value)}
+                <input id="new-board-input" ref={newInputRef} value={newName} onChange={e => setNewName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setNewName('') }}
-                  placeholder="New board…" aria-label="New board name"
-                  style={{ flex: 1, minWidth: 0, height: 32, boxSizing: 'border-box', border: 'none', borderRadius: 8, padding: '0 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
-                <button onClick={handleCreate} aria-label="Create board" style={{ width: 46, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 24, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+                  placeholder="New board…"
+                  style={{ flex: 1, minWidth: 0, height: 42, boxSizing: 'border-box', border: 'none', borderRadius: 8, padding: '0 10px', fontSize: 11, fontFamily: FONT, fontWeight: 600, outline: 'none', background: C.border, color: C.textWhite }} />
+                <button type="button" onClick={handleCreate} aria-label="Create board" style={{ width: 42, height: 42, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 24, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
               </div>
             </div>
           </>
@@ -2189,8 +2190,8 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               })}
             </div>
             <div style={{ padding: '8px 0 20px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-              <button onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
-                style={{ width: 32, height: 32, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 16, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
+              <button type="button" onClick={() => onCreateBoard('New board')} aria-label="Create board" title="Create board"
+                style={{ width: 42, height: 42, flexShrink: 0, border: 'none', background: C.accent, color: C.textWhite, borderRadius: 8, fontSize: 24, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>+</button>
             </div>
           </>
         )}
@@ -2225,7 +2226,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
                 style={{ fontSize: 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, background: 'transparent', border: 'none', outline: 'none', padding: 0, minWidth: 60, caretColor: C.textWhite }}
               />
             ) : (
-              <h1 className="renameable" onClick={() => setEditingTitle(true)} style={{ fontSize: isMobile ? 18 : 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{board.name}</h1>
+              <button type="button" className="renameable" onClick={() => setEditingTitle(true)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingTitle(true) } }} aria-label={`Edit board name: ${board.name}`} style={{ fontSize: isMobile ? 18 : 24, fontFamily: FONT, fontWeight: 900, color: C.textWhite, letterSpacing: -0.5, cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>{board.name}</button>
             )}
           </div>
 
@@ -2266,7 +2267,7 @@ function BoardDetail({ board, boards, onUpdate, onSwitchBoard, onCreateBoard, on
               style={{ width: 32, height: 32, borderRadius: 8, background: C.border, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               onMouseEnter={e => { e.currentTarget.style.background = C.borderHover }}
               onMouseLeave={e => { e.currentTarget.style.background = C.border }}>
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.4" fill={C.textWhite} /><circle cx="8" cy="8" r="1.4" fill={C.textWhite} /><circle cx="13" cy="8" r="1.4" fill={C.textWhite} /></svg>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="3" cy="8" r="1.4" fill={C.textWhite} /><circle cx="8" cy="8" r="1.4" fill={C.textWhite} /><circle cx="13" cy="8" r="1.4" fill={C.textWhite} /></svg>
             </button>
 
             {showBoardMenu && (
